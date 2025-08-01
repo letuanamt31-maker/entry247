@@ -1,8 +1,8 @@
 services:
-  - type: worker  # <-- đây là quan trọng, đổi từ "web" thành "worker"
+  - type: worker
     name: entry247-bot
     env: python
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python entry247_bot.py"
-    autoDeploy: true
+    repo: https://github.com/letuanamt31-maker/entry247
     branch: main
