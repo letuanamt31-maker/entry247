@@ -17,8 +17,8 @@ BUTTONS = [
     ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
     ("3️⃣ Entry247 | Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
     ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
-    ("5️⃣ Tool Độc quyền, Free 100%", "https://t.me/Entry247_Push"),  # Example link
-    ("6️⃣ Học và hiểu ( Video )", "https://t.me/Entry247_Push")       # Example link
+    ("5️⃣ Tool Độc quyền, Free 100%", "https://t.me/+ghRLRK6fHeYzYzE1"),  # Example link
+    ("6️⃣ Học và hiểu ( Video )", "https://t.me/+ghRLRK6fHeYzYzE1")       # Example link
 ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
