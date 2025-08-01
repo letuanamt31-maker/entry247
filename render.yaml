@@ -1,7 +1,8 @@
 services:
-  - type: worker
-    name: entry247_bot
+  - type: worker  # <-- đây là quan trọng, đổi từ "web" thành "worker"
+    name: entry247-bot
     env: python
-    plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "entry247_bot.py"
+    startCommand: "python entry247_bot.py"
+    autoDeploy: true
+    branch: main
