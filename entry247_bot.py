@@ -1,82 +1,88 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
+TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
+
 WELCOME_MESSAGE = """Xin chào các thành viên Entry247 🚀
 
 Chúc mừng bạn đã gia nhập 
 Entry247 | Premium Signals 🇻🇳
 
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
-
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
-# Danh sách tài nguyên (key, text, url, mô tả hướng dẫn)
 RESOURCES = {
     "data": {
         "label": "1️⃣ Kênh dữ liệu Update 24/24",
         "url": "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
-        "desc": "📊 Đây là bảng dữ liệu cập nhật 24/24 bao gồm phân tích kỹ thuật, dòng tiền và tín hiệu."
+        "desc": "📊 Đây là bảng dữ liệu cập nhật 24/24 với tín hiệu thị trường, phân tích dòng tiền, v.v."
     },
     "bcoin": {
         "label": "2️⃣ BCoin_Push",
         "url": "https://t.me/Entry247_Push",
-        "desc": "📢 Kênh BCoin_Push gửi các cảnh báo, tín hiệu sớm và nhịp thị trường."
+        "desc": "📢 Kênh đẩy tín hiệu và cảnh báo realtime thị trường crypto."
     },
     "signal": {
         "label": "3️⃣ Entry247 | Premium Signals 🇻🇳",
         "url": "https://t.me/+6yN39gbr94c0Zjk1",
-        "desc": "📈 Nơi chia sẻ tín hiệu giao dịch chất lượng từ đội ngũ phân tích Entry247."
+        "desc": "📈 Nơi chia sẻ tín hiệu giao dịch chất lượng mỗi ngày."
     },
     "talk": {
         "label": "4️⃣ Entry247 | Premium Trader Talk 🇻🇳",
         "url": "https://t.me/+eALbHBRF3xtlZWNl",
-        "desc": "💬 Nhóm thảo luận chiến lược, kinh nghiệm giao dịch cùng cộng đồng Entry247."
+        "desc": "💬 Cộng đồng thảo luận chiến lược và chia sẻ kinh nghiệm."
     },
     "tool": {
         "label": "5️⃣ Tool Độc quyền, Free 100%",
         "url": "https://t.me/+ghRLRK6fHeYzYzE1",
-        "desc": "🛠️ Bộ tool miễn phí dành riêng cho thành viên Entry247, hỗ trợ trade hiệu quả."
+        "desc": "🛠️ Bộ công cụ miễn phí hỗ trợ giao dịch thông minh."
     },
     "video": {
         "label": "6️⃣ Học và hiểu ( Video )",
         "url": "https://t.me/+ghRLRK6fHeYzYzE1",
-        "desc": "🎥 Video hướng dẫn từ cơ bản đến nâng cao giúp bạn hiểu sâu hơn về hệ thống."
+        "desc": "🎥 Hướng dẫn bằng video, dễ hiểu, dễ áp dụng."
     }
 }
 
 # Gửi menu chính
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = []
-    for key, item in RESOURCES.items():
-        keyboard.append([InlineKeyboardButton(item["label"], url=item["url"])])
-        keyboard.append([
-            InlineKeyboardButton("📘 Xem hướng dẫn", callback_data=f"help_{key}"),
-            InlineKeyboardButton("🔙 Quay lại", callback_data="back")
-        ])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
+    keyboard = [
+        [InlineKeyboardButton(info["label"], callback_data=f"open_{key}")]
+        for key, info in RESOURCES.items()
+    ]
+    await update.message.reply_text(WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Xử lý callback từ button phụ
-async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Xử lý nút
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     data = query.data
 
     if data == "back":
         await start(update, context)
+        return
+
+    if data.startswith("open_"):
+        key = data.split("_")[1]
+        resource = RESOURCES.get(key)
+        if resource:
+            keyboard = [
+                [
+                    InlineKeyboardButton("📘 Xem hướng dẫn", callback_data=f"help_{key}"),
+                    InlineKeyboardButton("🔙 Quay lại", callback_data="back")
+                ]
+            ]
+            await query.message.reply_text(f"🔗 {resource['url']}", reply_markup=InlineKeyboardMarkup(keyboard))
+
     elif data.startswith("help_"):
         key = data.split("_")[1]
-        if key in RESOURCES:
-            await query.message.reply_text(RESOURCES[key]["desc"])
-        else:
-            await query.message.reply_text("❌ Không tìm thấy nội dung hướng dẫn.")
+        desc = RESOURCES.get(key, {}).get("desc", "Không tìm thấy hướng dẫn.")
+        await query.message.reply_text(desc)
 
-if __name__ == '__main__':
-    TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
+# Main
+if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_button))
+    app.add_handler(CallbackQueryHandler(handle_callback))
     print("🤖 Entry247 Bot đang chạy...")
     app.run_polling()
