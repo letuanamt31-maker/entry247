@@ -13,7 +13,6 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chấ
 📌 Bạn có quyền truy cập vào 6 tài nguyên chính dưới đây:
 """
 
-# Danh sách các nút chính
 BUTTONS = [
     ("1️⃣ Kênh dữ liệu Update 24/24", "data"),
     ("2️⃣ BCoin_Push", "push"),
@@ -23,7 +22,6 @@ BUTTONS = [
     ("6️⃣ Học và hiểu ( Video )", "video"),
 ]
 
-# Liên kết tài nguyên tương ứng
 RESOURCES = {
     "data": "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
     "push": "https://t.me/Entry247_Push",
@@ -33,13 +31,11 @@ RESOURCES = {
     "video": "https://t.me/+ghRLRK6fHeYzYzE1"
 }
 
-# Lệnh /start: hiển thị menu chính
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
 
-# Xử lý khi nhấn nút
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -53,15 +49,14 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - Truy cập link ở trên.
 - Theo dõi nội dung cập nhật mỗi ngày.
 - Chúc bạn giao dịch hiệu quả ✅"""
-        
+
         keyboard = [[InlineKeyboardButton("⬅️ Quay lại menu chính", callback_data="back")]]
         await query.edit_message_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-
+    
     elif query.data == "back":
         keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
         await query.edit_message_text(text=WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Khởi chạy bot
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
