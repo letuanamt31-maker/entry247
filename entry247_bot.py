@@ -2,14 +2,15 @@ import os
 from aiohttp import web
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
-    ApplicationBuilder, 
-    CommandHandler, 
-    CallbackQueryHandler, 
-    ContextTypes
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
 )
 
 TOKEN = os.getenv("BOT_TOKEN") or "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 PORT = int(os.environ.get("PORT", 1000))
+APP_URL = os.getenv("APP_URL") or "https://your-render-url.onrender.com"  # <- Đổi URL thật tại đây
 
 WELCOME_MESSAGE = """🟢 Xin chào các thành viên Entry247 🚀
 
@@ -36,13 +37,15 @@ RESOURCES = {
     "signals": "https://t.me/+6yN39gbr94c0Zjk1",
     "talk": "https://t.me/+eALbHBRF3xtlZWNl",
     "tool": "https://t.me/+ghRLRK6fHeYzYzE1",
-    "video": "https://t.me/+ghRLRK6fHeYzYzE1"
+    "video": "https://t.me/+ghRLRK6fHeYzYzE1",
 }
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
+
 
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -63,29 +66,21 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
         await query.edit_message_text(text=WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def webhook(request):
-    data = await request.json()
-    update = Update.de_json(data, bot.application.bot)
-    await bot.application.process_update(update)
-    return web.Response()
 
-# Create aiohttp app
-app = web.Application()
+async def main():
+    app = Application.builder().token(TOKEN).build()
 
-if __name__ == "__main__":
-    # Khởi tạo bot
-    bot = ApplicationBuilder().token(TOKEN).build()
-    bot.add_handler(CommandHandler("start", start))
-    bot.add_handler(CallbackQueryHandler(handle_button))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_button))
 
-    # Thêm webhook handler
-    app.router.add_post("/", webhook)
-
-    # Chạy server web
-    print(f"🤖 Bot Entry247 đang chạy trên port {PORT}...")
-    bot.run_webhook(
+    # Khởi động webhook
+    await app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=f"https://your-render-url.onrender.com",  # <- Thay bằng URL của bạn
-        web_app=app
+        webhook_url=f"{APP_URL}/"
     )
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
