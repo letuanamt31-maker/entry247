@@ -60,7 +60,7 @@ if __name__ == '__main__':
     import os
 
     # ⚠️ Lưu ý: KHÔNG để token bot công khai khi triển khai thật
-    TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+    TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
     app = ApplicationBuilder().token(TOKEN).build()
 
