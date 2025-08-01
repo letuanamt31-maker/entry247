@@ -1,6 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
+# TOKEN đã được gắn trực tiếp
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
 WELCOME_MESSAGE = """Xin chào các thành viên Entry247 🚀
@@ -15,36 +16,36 @@ RESOURCES = {
     "data": {
         "label": "1️⃣ Kênh dữ liệu Update 24/24",
         "url": "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
-        "desc": "📊 Đây là bảng dữ liệu cập nhật 24/24 với tín hiệu thị trường, phân tích dòng tiền, v.v."
+        "desc": "📊 Dữ liệu cập nhật 24/24 với phân tích kỹ thuật, dòng tiền và tín hiệu thị trường."
     },
     "bcoin": {
         "label": "2️⃣ BCoin_Push",
         "url": "https://t.me/Entry247_Push",
-        "desc": "📢 Kênh đẩy tín hiệu và cảnh báo realtime thị trường crypto."
+        "desc": "📢 Kênh đẩy tín hiệu và cảnh báo realtime từ hệ thống Entry247."
     },
     "signal": {
         "label": "3️⃣ Entry247 | Premium Signals 🇻🇳",
         "url": "https://t.me/+6yN39gbr94c0Zjk1",
-        "desc": "📈 Nơi chia sẻ tín hiệu giao dịch chất lượng mỗi ngày."
+        "desc": "📈 Tín hiệu giao dịch chất lượng cao, cập nhật thường xuyên trong ngày."
     },
     "talk": {
         "label": "4️⃣ Entry247 | Premium Trader Talk 🇻🇳",
         "url": "https://t.me/+eALbHBRF3xtlZWNl",
-        "desc": "💬 Cộng đồng thảo luận chiến lược và chia sẻ kinh nghiệm."
+        "desc": "💬 Cộng đồng thảo luận, chia sẻ kinh nghiệm giao dịch cùng nhau."
     },
     "tool": {
         "label": "5️⃣ Tool Độc quyền, Free 100%",
         "url": "https://t.me/+ghRLRK6fHeYzYzE1",
-        "desc": "🛠️ Bộ công cụ miễn phí hỗ trợ giao dịch thông minh."
+        "desc": "🛠️ Các công cụ hỗ trợ giao dịch độc quyền, hoàn toàn miễn phí."
     },
     "video": {
         "label": "6️⃣ Học và hiểu ( Video )",
         "url": "https://t.me/+ghRLRK6fHeYzYzE1",
-        "desc": "🎥 Hướng dẫn bằng video, dễ hiểu, dễ áp dụng."
+        "desc": "🎥 Video hướng dẫn dễ hiểu, từ cơ bản đến nâng cao."
     }
 }
 
-# Gửi menu chính
+# Menu chính
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(info["label"], callback_data=f"open_{key}")]
@@ -52,7 +53,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Xử lý nút
+# Xử lý các button
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -76,7 +77,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("help_"):
         key = data.split("_")[1]
-        desc = RESOURCES.get(key, {}).get("desc", "Không tìm thấy hướng dẫn.")
+        desc = RESOURCES.get(key, {}).get("desc", "❌ Không tìm thấy hướng dẫn.")
         await query.message.reply_text(desc)
 
 # Main
