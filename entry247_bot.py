@@ -1,21 +1,19 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# ✅ Token Telegram Bot (đã gắn cứng)
+# Token bot Telegram
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
-# ✅ Nội dung chào mừng
+# Nội dung chào mừng
 WELCOME_MESSAGE = """Xin chào các thành viên Entry247 🚀
 
 Chúc mừng bạn đã gia nhập 
 Entry247 | Premium Signals 🇻🇳
 
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
-
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
-# ✅ Danh sách tài nguyên
+# Danh sách tài nguyên
 RESOURCES = {
     "data": {
         "label": "1️⃣ Kênh dữ liệu Update 24/24",
@@ -49,32 +47,28 @@ RESOURCES = {
     }
 }
 
-
-# ✅ Hiển thị menu chính (dùng lại ở /start và khi bấm Quay lại)
-async def show_main_menu(msg_or_query_msg):
-    keyboard = [
+# Tạo menu chính
+def main_keyboard():
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton(info["label"], callback_data=f"open_{key}")]
         for key, info in RESOURCES.items()
-    ]
-    await msg_or_query_msg.reply_text(WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
+    ])
 
-
-# ✅ Lệnh /start
+# Gửi menu chính khi /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
-        await show_main_menu(update.message)
+        await update.message.reply_text(WELCOME_MESSAGE, reply_markup=main_keyboard())
     elif update.callback_query:
-        await show_main_menu(update.callback_query.message)
+        await update.callback_query.message.reply_text(WELCOME_MESSAGE, reply_markup=main_keyboard())
 
-
-# ✅ Xử lý nút bấm
+# Xử lý các callback từ nút bấm
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
 
     if data == "back":
-        await show_main_menu(query.message)
+        await query.message.reply_text(WELCOME_MESSAGE, reply_markup=main_keyboard())
         return
 
     if data.startswith("open_"):
@@ -94,8 +88,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         desc = RESOURCES.get(key, {}).get("desc", "❌ Không tìm thấy hướng dẫn.")
         await query.message.reply_text(desc)
 
-
-# ✅ Khởi chạy bot
+# Khởi động bot
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
