@@ -4,4 +4,6 @@ services:
     env: python
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python entry247_bot.py"
+    repo: https://github.com/letuanamt31-maker/entry247
+    branch: main
     plan: free
