@@ -2,7 +2,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Nội dung tin nhắn welcome
-WELCOME_MESSAGE = """😉😌😍🥰😉😌😇🙂 Xin chào các thành viên Entry247 🚀
+WELCOME_MESSAGE = """ Xin chào các thành viên Entry247 🚀
 
 Chúc mừng bạn đã gia nhập 
 Entry247 | Premium Signals 🇻🇳
