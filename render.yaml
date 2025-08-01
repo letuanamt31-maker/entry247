@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: entry247-bot
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python entry247_bot.py
