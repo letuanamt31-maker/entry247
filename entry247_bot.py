@@ -1,71 +1,108 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+import os
+import asyncio
+import logging
+import threading
+import http.server
+import socketserver
 
-# Nội dung tin nhắn chính
-WELCOME_MESSAGE = """🚀 Xin chào các thành viên Entry247!
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
 
-Chúc mừng bạn đã gia nhập Entry247 | Premium Signals 🇻🇳
+TOKEN = os.getenv("7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4")
 
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính:
-"""
-
-BUTTONS = [
-    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880"),
-    ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
-    ("3️⃣ Entry247 | Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
-    ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
-    ("5️⃣ Tool Độc quyền, Free 100%", "https://t.me/+ghRLRK6fHeYzYzE1"),
-    ("6️⃣ Học và hiểu (Video)", "https://t.me/+ghRLRK6fHeYzYzE1")
+WELCOME_MESSAGE = "👋 Chào mừng bạn đến với Entry247 Bot! Hãy chọn một mục bên dưới:"
+MAIN_MENU = [
+    [InlineKeyboardButton("📌 Giới thiệu", callback_data="intro")],
+    [InlineKeyboardButton("📋 Hướng dẫn", callback_data="guide")],
+    [InlineKeyboardButton("🔙 Quay lại menu chính", callback_data="main_menu")],
 ]
 
-GUIDE_TEXT = """📘 Hướng dẫn sử dụng bot:
-
-1️⃣ Nhấn vào các nút để truy cập tài nguyên.
-
-2️⃣ Sau khi xem xong, bạn có thể nhấn 🔙 "Quay lại" để trở lại menu chính.
-
-💬 Mọi thắc mắc vui lòng liên hệ admin hỗ trợ.
-"""
-
-# Lệnh /start
+# Gửi menu chính
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(text, url=link)] for text, link in BUTTONS]
-    keyboard.append([InlineKeyboardButton("📘 Xem hướng dẫn", callback_data="show_guide")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    query = update.callback_query
+    if query:
+        await query.answer()
+        try:
+            await query.message.delete()
+        except:
+            pass
+        await query.message.reply_text(
+            WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(MAIN_MENU)
+        )
+    elif update.message:
+        await update.message.reply_text(
+            WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(MAIN_MENU)
+        )
 
-    await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
 
-# Xử lý callback từ nút bấm
+# Xử lý khi nhấn nút
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
+        data = query.data
 
-    if query.data == "show_guide":
-        reply_markup = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 Quay lại", callback_data="back_to_main")]
-        ])
-        await query.edit_message_text(text=GUIDE_TEXT, reply_markup=reply_markup)
+        try:
+            await query.message.delete()
+        except:
+            pass
 
-    elif query.data == "back_to_main":
-        keyboard = [[InlineKeyboardButton(text, url=link)] for text, link in BUTTONS]
-        keyboard.append([InlineKeyboardButton("📘 Xem hướng dẫn", callback_data="show_guide")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        if data == "intro":
+            await query.message.reply_text(
+                "📌 Đây là bot hỗ trợ từ Entry247.\nChúng tôi cung cấp thông tin về kỳ thi, tư vấn, v.v.",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Quay lại menu chính", callback_data="main_menu")]]
+                ),
+            )
 
-        await query.edit_message_text(text=WELCOME_MESSAGE, reply_markup=reply_markup)
+        elif data == "guide":
+            await query.message.reply_text(
+                "📋 Hướng dẫn sử dụng bot:\n- Bấm các nút để xem thông tin\n- Dùng nút Quay lại để về menu",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Quay lại menu chính", callback_data="main_menu")]]
+                ),
+            )
 
-# Main
-if __name__ == '__main__':
-    import os
+        elif data == "main_menu":
+            await query.message.reply_text(
+                WELCOME_MESSAGE,
+                reply_markup=InlineKeyboardMarkup(MAIN_MENU),
+            )
 
-    # ⚠️ Lưu ý: KHÔNG để token bot công khai khi triển khai thật
-    TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
-    app = ApplicationBuilder().token(TOKEN).build()
+# Cổng giả giữ cho app "sống" trên Render Free Tier
+def keep_alive():
+    PORT = int(os.environ.get("PORT", 10000))
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", PORT), handler) as httpd:
+        print(f"✅ Keep-alive HTTP server running on port {PORT}")
+        httpd.serve_forever()
+
+
+# Chạy bot
+async def main():
+    app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
 
     print("🤖 Entry247 Bot đang chạy...")
-    app.run_polling()
+    await app.run_polling()
+
+
+if __name__ == "__main__":
+    threading.Thread(target=keep_alive).start()
+    asyncio.run(main())
