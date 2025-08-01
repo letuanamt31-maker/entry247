@@ -94,7 +94,7 @@ def keep_alive():
 
 # Chạy bot
 async def main():
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
