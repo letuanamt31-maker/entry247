@@ -1,9 +1,10 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# TOKEN đã được gắn trực tiếp
+# ✅ Gắn token trực tiếp
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
+# 🎉 Tin nhắn chào mừng
 WELCOME_MESSAGE = """Xin chào các thành viên Entry247 🚀
 
 Chúc mừng bạn đã gia nhập 
@@ -12,6 +13,7 @@ Entry247 | Premium Signals 🇻🇳
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
+# 📚 Dữ liệu tài nguyên
 RESOURCES = {
     "data": {
         "label": "1️⃣ Kênh dữ liệu Update 24/24",
@@ -45,7 +47,7 @@ RESOURCES = {
     }
 }
 
-# Menu chính
+# ✅ Gửi menu chính
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(info["label"], callback_data=f"open_{key}")]
@@ -53,13 +55,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Xử lý các button
+# ✅ Xử lý các button
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
 
     if data == "back":
+        # Quay lại menu chính
+        await query.message.delete()
         await start(update, context)
         return
 
@@ -67,12 +71,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         key = data.split("_")[1]
         resource = RESOURCES.get(key)
         if resource:
+            # Gửi link kèm 2 button phụ
             keyboard = [
                 [
                     InlineKeyboardButton("📘 Xem hướng dẫn", callback_data=f"help_{key}"),
                     InlineKeyboardButton("🔙 Quay lại", callback_data="back")
                 ]
             ]
+            await query.message.delete()
             await query.message.reply_text(f"🔗 {resource['url']}", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data.startswith("help_"):
@@ -80,7 +86,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         desc = RESOURCES.get(key, {}).get("desc", "❌ Không tìm thấy hướng dẫn.")
         await query.message.reply_text(desc)
 
-# Main
+# ✅ Chạy bot bằng polling
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
