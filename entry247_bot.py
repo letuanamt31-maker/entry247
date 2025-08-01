@@ -1,82 +1,61 @@
-import os
-import asyncio
-from telegram import (
-    InlineKeyboardButton, InlineKeyboardMarkup, Update
-)
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ContextTypes
-)
-from aiohttp import web
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
-WELCOME_MESSAGE = """Xin chào các thành viên Entry247 🚀
-
-Chúc mừng bạn đã gia nhập
-Entry247 | Premium Signals 🇻🇳
-
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
-"""
-
-BUTTONS = [
-    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880"),
-    ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
-    ("3️⃣ Entry247 | Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
-    ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
-    ("5️⃣ Tool Độc quyền, Free 100%", "https://t.me/+ghRLRK6fHeYzYzE1"),
-    ("6️⃣ Học và hiểu ( Video )", "https://t.me/+ghRLRK6fHeYzYzE1"),
-    ("📘 Xem hướng dẫn sử dụng", "HDSD")
-]
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Giao diện nút chính
+def main_menu():
     keyboard = [
-        [InlineKeyboardButton(text, callback_data=data if data == "HDSD" else f"URL|{url}")]
-        for text, url in BUTTONS
+        [InlineKeyboardButton("📄 Tính năng chính", callback_data='main')],
+        [InlineKeyboardButton("📘 Xem hướng dẫn", callback_data='guide')]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
+    return InlineKeyboardMarkup(keyboard)
 
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Giao diện sau khi chọn "Tính năng chính"
+def feature_menu():
+    keyboard = [
+        [InlineKeyboardButton("📘 Xem hướng dẫn", callback_data='guide')],
+        [InlineKeyboardButton("🔙 Quay lại", callback_data='back')]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# /start command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 Chào mừng bạn đến với bot Entry247!",
+        reply_markup=main_menu()
+    )
+
+# Xử lý các callback khi người dùng nhấn button
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    data = query.data
-    if data.startswith("URL|"):
-        url = data.split("|", 1)[1]
-        await query.message.reply_text(f"👉 Mở liên kết: {url}")
-    elif data == "HDSD":
-        await query.message.reply_text(
-            "📘 *Hướng dẫn sử dụng bot:*\n\n"
-            "- Nhấn vào các nút để truy cập dữ liệu, tín hiệu và cộng đồng hỗ trợ.\n"
-            "- Trở lại menu chính bất kỳ lúc nào bằng cách nhấn nút 🔙 Quay lại.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Quay lại menu chính", callback_data="BACK")]
-            ]),
-            parse_mode='Markdown'
+    if query.data == 'main':
+        await query.edit_message_text(
+            text="🧮 Đây là tính năng chính của bot.",
+            reply_markup=feature_menu()
         )
-    elif data == "BACK":
-        return await start(update, context)
 
-async def keep_alive():
-    async def handler(request):
-        return web.Response(text="✅ Bot is alive.")
-    app = web.Application()
-    app.router.add_get("/", handler)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 10000)
-    await site.start()
-    print("✅ Keep-alive HTTP server running on port 10000")
+    elif query.data == 'guide':
+        await query.edit_message_text(
+            text="📘 Hướng dẫn sử dụng bot:\n\n- Nhấn vào các nút để tương tác.\n- Dùng /start để bắt đầu lại.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Quay lại", callback_data='back')]
+            ])
+        )
 
-async def main():
-    await keep_alive()
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_callback))
-    print("🤖 Entry247 Bot đang chạy...")
-    await app.run_polling()
+    elif query.data == 'back':
+        await query.edit_message_text(
+            text="🔙 Quay lại menu chính:",
+            reply_markup=main_menu()
+        )
 
-if __name__ == "__main__":
-    asyncio.run(main())
+if __name__ == '__main__':
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler('start', start))
+    app.add_handler(CallbackQueryHandler(button_handler))
+
+    print("✅ Bot Entry247 đang chạy...")
+    app.run_polling()
