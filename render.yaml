@@ -1,7 +1,7 @@
 services:
-  - type: web
+  - type: worker
     name: entry247-bot
     env: python
     plan: free
-    buildCommand: ""
-    startCommand: python entry247_bot.py
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
