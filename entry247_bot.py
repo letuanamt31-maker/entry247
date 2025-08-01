@@ -1,61 +1,70 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
-# Giao diện nút chính
-def main_menu():
-    keyboard = [
-        [InlineKeyboardButton("📄 Tính năng chính", callback_data='main')],
-        [InlineKeyboardButton("📘 Xem hướng dẫn", callback_data='guide')]
-    ]
-    return InlineKeyboardMarkup(keyboard)
+WELCOME_MESSAGE = """🟢 Xin chào các thành viên Entry247 🚀
 
-# Giao diện sau khi chọn "Tính năng chính"
-def feature_menu():
-    keyboard = [
-        [InlineKeyboardButton("📘 Xem hướng dẫn", callback_data='guide')],
-        [InlineKeyboardButton("🔙 Quay lại", callback_data='back')]
-    ]
-    return InlineKeyboardMarkup(keyboard)
+Chúc mừng bạn đã gia nhập  
+Entry247 | Premium Signals 🇻🇳
 
-# /start command
+Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
+
+📌 Bạn có quyền truy cập vào 6 tài nguyên chính dưới đây:
+"""
+
+# Danh sách các nút chính
+BUTTONS = [
+    ("1️⃣ Kênh dữ liệu Update 24/24", "data"),
+    ("2️⃣ BCoin_Push", "push"),
+    ("3️⃣ Entry247 | Premium Signals 🇻🇳", "signals"),
+    ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "talk"),
+    ("5️⃣ Tool Độc quyền, Free 100%", "tool"),
+    ("6️⃣ Học và hiểu ( Video )", "video"),
+]
+
+# Liên kết tài nguyên tương ứng
+RESOURCES = {
+    "data": "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
+    "push": "https://t.me/Entry247_Push",
+    "signals": "https://t.me/+6yN39gbr94c0Zjk1",
+    "talk": "https://t.me/+eALbHBRF3xtlZWNl",
+    "tool": "https://t.me/+ghRLRK6fHeYzYzE1",
+    "video": "https://t.me/+ghRLRK6fHeYzYzE1"
+}
+
+# Lệnh /start: hiển thị menu chính
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 Chào mừng bạn đến với bot Entry247!",
-        reply_markup=main_menu()
-    )
+    keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
 
-# Xử lý các callback khi người dùng nhấn button
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Xử lý khi nhấn nút
+async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data == 'main':
-        await query.edit_message_text(
-            text="🧮 Đây là tính năng chính của bot.",
-            reply_markup=feature_menu()
-        )
+    if query.data in RESOURCES:
+        text = f"""📎 Đây là tài nguyên bạn chọn:
 
-    elif query.data == 'guide':
-        await query.edit_message_text(
-            text="📘 Hướng dẫn sử dụng bot:\n\n- Nhấn vào các nút để tương tác.\n- Dùng /start để bắt đầu lại.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Quay lại", callback_data='back')]
-            ])
-        )
+👉 {RESOURCES[query.data]}
 
-    elif query.data == 'back':
-        await query.edit_message_text(
-            text="🔙 Quay lại menu chính:",
-            reply_markup=main_menu()
-        )
+📘 *Hướng dẫn sử dụng:*
+- Truy cập link ở trên.
+- Theo dõi nội dung cập nhật mỗi ngày.
+- Chúc bạn giao dịch hiệu quả ✅"""
+        
+        keyboard = [[InlineKeyboardButton("⬅️ Quay lại menu chính", callback_data="back")]]
+        await query.edit_message_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
+    elif query.data == "back":
+        keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
+        await query.edit_message_text(text=WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
+
+# Khởi chạy bot
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler('start', start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-
-    print("✅ Bot Entry247 đang chạy...")
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_button))
+    print("🤖 Entry247 Bot đang chạy...")
     app.run_polling()
