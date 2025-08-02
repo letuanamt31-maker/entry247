@@ -2,12 +2,11 @@ services:
   - type: web
     name: entry247-bot
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: ""
     startCommand: python entry247_bot.py
     envVars:
-      - key: PORT
-        value: 10000
-    plan: free
-    runtime: python
-    build:
-      pythonVersion: 3.10.13
+      - key: BOT_TOKEN
+        value: 7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4
+
+runtime: python
+pythonVersion: 3.10.13
