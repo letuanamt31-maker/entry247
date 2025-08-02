@@ -16,20 +16,18 @@ def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
 WELCOME_TEXT = """Xin chào các thành viên Entry247 🚀
-
-Bạn đang tìm hiểu và cũng đang tìm hiểu 
+" Vào lệnh đúng , nghỉ ngơi khoẻ "
 Entry247 | Premium Signals 🇻🇳
 
 Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
-Chúng tôi không thu bất kỳ khoản phí dịch vụ nào 
-Hãy đăng ký cùng về team Entry247 nào !
+
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
 MENU = [
     ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880#gid=247967880"),
-    ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
-    ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
+    ("2️⃣ Dữ liệu BCoin_Push", "https://t.me/Entry247_Push"),
+    ("3️⃣ Cộng đồng Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
     ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
     ("5️⃣ Tool Độc quyền", ""),
     ("6️⃣ Học và Hiểu (Video)", ""),
