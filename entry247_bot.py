@@ -1,104 +1,118 @@
-import os
 import asyncio
-from flask import Flask, request
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application,
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-)
+import threading
+from flask import Flask
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# ===== TOKEN BOT & WEBHOOK =====
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
-WEBHOOK_URL = "https://entry247.onrender.com/webhook"
 
-# ===== FLASK APP =====
-app = Flask(__name__)
-bot_app: Application = None  # Biến toàn cục
+# Flask app để giữ bot sống trên Render
+flask_app = Flask(__name__)
 
-# ===== WELCOME MESSAGE & MENU =====
-WELCOME_MESSAGE = """👋 Xin chào các thành viên Entry247 🚀
+@flask_app.route('/')
+def home():
+    return "✅ Entry247 Bot đang hoạt động."
+
+# ===== Tin nhắn chào mừng =====
+WELCOME_MESSAGE = """😉😌😍🥰😉😌😇🙂 Xin chào các thành viên *Entry247 🚀*
 
 Chúc mừng bạn đã gia nhập  
-Entry247 | Premium Signals 🇻🇳
+*Entry247 | Premium Signals 🇻🇳*
 
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính dưới đây:
+Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
+
+🟢 Bạn có quyền truy cập vào *6 tài nguyên chính* 🟢
 """
 
-BUTTONS = [
-    ("1️⃣ Kênh dữ liệu Update 24/24", "data"),
-    ("2️⃣ BCoin_Push", "push"),
-    ("3️⃣ Entry247 | Premium Signals 🇻🇳", "signals"),
-    ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "talk"),
-    ("5️⃣ Tool Độc quyền, Free 100%", "tools"),
-    ("6️⃣ Học và hiểu ( Video )", "videos"),
-]
-
-LINKS = {
-    "data": "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
-    "push": "https://t.me/Entry247_Push",
-    "signals": "https://t.me/+6yN39gbr94c0Zjk1",
-    "talk": "https://t.me/+eALbHBRF3xtlZWNl",
-    "tools": "https://t.me/+ghRLRK6fHeYzYzE1",
-    "videos": "https://t.me/+ghRLRK6fHeYzYzE1"
+# ===== Nội dung chi tiết của 6 phần =====
+RESOURCES = {
+    "data": {
+        "title": "1️⃣ Kênh dữ liệu Update 24/24",
+        "text": "👉📄 Tại đây:\nhttps://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
+        "guide": "💡 *Hướng dẫn:* Vào link Google Sheet để xem dữ liệu cập nhật theo thời gian thực từ bot giao dịch."
+    },
+    "push": {
+        "title": "2️⃣ BCoin_Push",
+        "text": "👉 https://t.me/Entry247_Push",
+        "guide": "💡 *Hướng dẫn:* Tham gia kênh để nhận tín hiệu đẩy giá, báo hiệu mùa Altcoin season, và nhiều insight khác."
+    },
+    "signals": {
+        "title": "3️⃣ Entry247 | Premium Signals 🇻🇳",
+        "text": "👉 https://t.me/+6yN39gbr94c0Zjk1",
+        "guide": "💡 *Hướng dẫn:* Nhóm call lệnh chính — vào để nhận điểm vào/ra lệnh chất lượng mỗi ngày."
+    },
+    "talk": {
+        "title": "4️⃣ Entry247 | Premium Trader Talk 🇻🇳",
+        "text": "👉 https://t.me/+eALbHBRF3xtlZWNl",
+        "guide": "💡 *Hướng dẫn:* Thảo luận chiến lược, phân tích sâu, hỗ trợ từ cộng đồng AE Entry247."
+    },
+    "tools": {
+        "title": "5️⃣ Tool Độc quyền, Free 100%",
+        "text": "🛠 Mình sẽ làm tốt các công cụ nhận diện thị trường để AE nhóm tối ưu vào lệnh.",
+        "guide": "💡 *Hướng dẫn:* Nếu có ý tưởng, hãy đề xuất — công cụ sẽ được phát triển theo nhu cầu thực tế."
+    },
+    "videos": {
+        "title": "6️⃣ Học và hiểu (Video)",
+        "text": "🎥 Nội dung đang hoàn thành:\n- Đi đúng từ đầu 🤨\n- Hiểu bẫy để né 🤨\n- Xử lý lỗi khi vào sai trends 💡",
+        "guide": "💡 *Hướng dẫn:* Video hướng dẫn giúp trader hiểu rõ cách giao dịch và tránh lỗi cơ bản."
+    }
 }
 
 def main_menu():
-    return InlineKeyboardMarkup([[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS])
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(info["title"], callback_data=key)] for key, info in RESOURCES.items()
+    ])
 
-# ===== HANDLERS =====
+def resource_menu(key):
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔍 Xem hướng dẫn", callback_data=f"guide_{key}"),
+            InlineKeyboardButton("⬅️ Trở lại", callback_data="back")
+        ]
+    ])
+
+# ===== Handlers =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(WELCOME_MESSAGE, reply_markup=main_menu())
+    await update.message.reply_text(WELCOME_MESSAGE, parse_mode="Markdown", reply_markup=main_menu())
 
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data in LINKS:
+    data = query.data
+
+    if data in RESOURCES:
+        info = RESOURCES[data]
+        text = f"*{info['title']}*\n\n{info['text']}"
         await query.edit_message_text(
-            f"""🔗 *Tài nguyên bạn chọn:*
-
-👉 {LINKS[query.data]}
-
-📘 *Hướng dẫn sử dụng:*
-- Truy cập link trên để xem nội dung cập nhật mỗi ngày.
-- Nếu chưa truy cập được, kiểm tra quyền truy cập hoặc nhắn hỗ trợ.""",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Quay lại menu chính", callback_data="back")]]),
-            parse_mode="Markdown"
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=resource_menu(data)
         )
-    elif query.data == "back":
-        await query.edit_message_text(WELCOME_MESSAGE, reply_markup=main_menu())
+    elif data.startswith("guide_"):
+        key = data.replace("guide_", "")
+        guide = RESOURCES.get(key, {}).get("guide", "Chưa có hướng dẫn.")
+        await query.edit_message_text(
+            text=f"{guide}",
+            parse_mode="Markdown",
+            reply_markup=resource_menu(key)
+        )
+    elif data == "back":
+        await query.edit_message_text(
+            text=WELCOME_MESSAGE,
+            parse_mode="Markdown",
+            reply_markup=main_menu()
+        )
 
-# ===== FLASK ROUTES =====
-@app.route("/", methods=["GET"])
-def root():
-    return "✅ Entry247 Bot is live!"
-
-@app.route("/webhook", methods=["POST"])
-async def webhook():
-    data = request.get_data().decode("utf-8")
-    await bot_app._update(data)
-    return "ok"
-
-# ===== CHẠY BOT =====
+# ===== Khởi chạy bot =====
 async def run_bot():
-    global bot_app
-    bot_app = ApplicationBuilder().token(TOKEN).build()
-    bot_app.add_handler(CommandHandler("start", start))
-    bot_app.add_handler(CallbackQueryHandler(handle_button))
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_button))
+    print("🤖 Bot đang chạy polling...")
+    await app.run_polling()
 
-    await bot_app.initialize()
-    await bot_app.bot.set_webhook(WEBHOOK_URL)
-    await bot_app.start()
-    print(f"🚀 Webhook set tại: {WEBHOOK_URL}")
-
-# ===== CHẠY FLASK =====
 if __name__ == "__main__":
-    import threading
-
     threading.Thread(target=lambda: asyncio.run(run_bot())).start()
-    port = int(os.environ.get("PORT", 10000))
-    print(f"🌐 Flask server chạy tại cổng {port}")
-    app.run(host="0.0.0.0", port=port)
+    print("🌐 Flask giữ bot luôn sống...")
+    flask_app.run(host="0.0.0.0", port=10000)
