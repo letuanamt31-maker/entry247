@@ -1,60 +1,71 @@
 from flask import Flask
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import threading
+from threading import Thread
 import asyncio
-import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
-# Token bot
-TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
+BOT_TOKEN = '7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4'
 
-logging.basicConfig(level=logging.INFO)
+app_flask = Flask(__name__)
+app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
-app = Flask(__name__)
+# ===================== BOT HANDLERS =========================
 
-@app.route("/")
-def home():
-    return "🤖 Entry247 Bot đang hoạt động!"
+WELCOME_TEXT = """😉😌😍🥰😉😌😇🙂 Xin chào các thành viên Entry247 🚀
 
-WELCOME_MSG = """
-😉😌😍🥰😉😌😇🙂 Xin chào các thành viên Entry247 🚀
-
-Chúc mừng bạn đã gia nhập 
-<b>Entry247 | Premium Signals 🇻🇳</b>
+Chúc mừng bạn đã gia nhập
+Entry247 | Premium Signals 🇻🇳
 
 Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
 
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
-def main_keyboard():
+MENU = [
+    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880#gid=247967880"),
+    ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
+    ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
+    ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
+    ("5️⃣ Tool Độc quyền", "https://t.me/Entry247"),
+    ("6️⃣ Học và Hiểu (Video)", "https://t.me/Entry247"),
+]
+
+def build_main_keyboard():
+    keyboard = [[InlineKeyboardButton(text, callback_data=f"menu_{i}")] for i, (text, _) in enumerate(MENU)]
+    return InlineKeyboardMarkup(keyboard)
+
+def build_sub_keyboard(index):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📄 Dữ liệu Bot Update 24/24", url="https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880")],
-        [InlineKeyboardButton("📡 BCoin_Push (Báo tín hiệu)", url="https://t.me/Entry247_Push")],
-        [InlineKeyboardButton("📈 Premium Signals (Call lệnh)", url="https://t.me/+6yN39gbr94c0Zjk1")],
-        [InlineKeyboardButton("💬 Premium Trader Talk", url="https://t.me/+eALbHBRF3xtlZWNl")],
-        [InlineKeyboardButton("🛠 Tool độc quyền FREE", callback_data="tools")],
-        [InlineKeyboardButton("🎥 Học và Hiểu (Video)", callback_data="learning")],
-        [InlineKeyboardButton("📞 Liên hệ Admin", url="https://t.me/Entry247")]
+        [InlineKeyboardButton("📖 Xem hướng dẫn", url=MENU[index][1])],
+        [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        WELCOME_MSG,
-        reply_markup=main_keyboard(),
-        parse_mode="HTML"
-    )
+    await update.message.reply_text(WELCOME_TEXT, reply_markup=build_main_keyboard())
 
-def run_bot():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    app_telegram = ApplicationBuilder().token(TOKEN).build()
+async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "main_menu":
+        await query.edit_message_text(WELCOME_TEXT, reply_markup=build_main_keyboard())
+    elif query.data.startswith("menu_"):
+        index = int(query.data.split("_")[1])
+        await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
+
+# =============== ROUTES FLASK ================
+
+@app_flask.route("/")
+def home():
+    return "🤖 Entry247 Bot is alive!"
+
+# =============== RUN BOT ASYNC ===============
+
+async def run_bot():
     app_telegram.add_handler(CommandHandler("start", start))
-    print("🤖 Bot Telegram đang chạy...")
-    app_telegram.run_polling()
+    app_telegram.add_handler(CallbackQueryHandler(handle_button))
+    print("🤖 Bot đang khởi chạy...")
+    await app_telegram.run_polling()
 
-if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot)
-    bot_thread.start()
-
-    app.run(host="0.0.0.0", port=10000)
+def start_bot_thread():
+    asyncio.run
