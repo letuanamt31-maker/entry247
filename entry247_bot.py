@@ -2,22 +2,20 @@ from flask import Flask
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import threading
+import asyncio
 import logging
 
-# Telegram Bot Token
+# Token bot
 TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
-# Logger
 logging.basicConfig(level=logging.INFO)
 
-# Flask app
 app = Flask(__name__)
 
 @app.route("/")
 def home():
     return "🤖 Entry247 Bot đang hoạt động!"
 
-# Tin nhắn chào
 WELCOME_MSG = """
 😉😌😍🥰😉😌😇🙂 Xin chào các thành viên Entry247 🚀
 
@@ -29,7 +27,6 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chấ
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
-# Tạo bàn phím
 def main_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📄 Dữ liệu Bot Update 24/24", url="https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880")],
@@ -41,16 +38,12 @@ def main_keyboard():
         [InlineKeyboardButton("📞 Liên hệ Admin", url="https://t.me/Entry247")]
     ])
 
-# /start handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         WELCOME_MSG,
         reply_markup=main_keyboard(),
         parse_mode="HTML"
     )
-
-# Hàm chạy bot
-import asyncio
 
 def run_bot():
     loop = asyncio.new_event_loop()
@@ -60,11 +53,8 @@ def run_bot():
     print("🤖 Bot Telegram đang chạy...")
     app_telegram.run_polling()
 
-# Main
 if __name__ == "__main__":
-    # Bot chạy trong thread riêng
     bot_thread = threading.Thread(target=run_bot)
     bot_thread.start()
 
-    # Flask chạy trên PORT 10000
     app.run(host="0.0.0.0", port=10000)
