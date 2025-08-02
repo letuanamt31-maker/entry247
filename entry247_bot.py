@@ -20,7 +20,7 @@ MENU = [
     ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
     ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
     ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
-    ("5️⃣ Tool Độc quyền", ""),
+    ("5️⃣ Altcoin Season Signals 🇻🇳", "https://t.me/+_T-rtdJDveRjMWRl"),
     ("6️⃣ Học và Hiểu (Video)", ""),
 ]
 
@@ -57,7 +57,8 @@ def build_sub_keyboard(index):
         ])
     elif index == 4:
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("🛠️ Entry247 đang hoàn thiện, sẽ public Free 100% trong Premium", callback_data="tool_info")],
+            [InlineKeyboardButton("🔗 Xin vào nhóm", url=MENU[index][1])],
+            [InlineKeyboardButton("📺 Tìm hiểu nhóm", callback_data="info_group_5")],
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
     elif index == 5:
