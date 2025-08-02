@@ -15,13 +15,14 @@ def index():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
-WELCOME_TEXT = """Xin chào các thành viên Entry247 🚀
-" Vào lệnh đúng , nghỉ ngơi khoẻ "
-Entry247 | Premium Signals 🇻🇳
+WELCOME_TEXT = """🌟 Xin chào các thành viên Entry247 🚀
+"Vào lệnh đúng – nghỉ ngơi khoẻ"
 
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
+💎 Entry247 | Premium Signals 🇻🇳
+- Nơi tập hợp tín hiệu giao dịch, dữ liệu chuẩn xác và chiến lược rõ ràng 
+– Dành cho những trader nghiêm túc muốn giao dịch có kỷ luật và hiệu quả.
 
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính bên dưới .
 """
 
 MENU = [
