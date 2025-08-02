@@ -9,7 +9,6 @@ BOT_TOKEN = '7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4'
 app_flask = Flask(__name__)
 app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# ===================== FLASK =====================
 @app_flask.route("/")
 def index():
     return "✅ Bot is running on Render!"
@@ -17,16 +16,15 @@ def index():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
-# ===================== TELEGRAM =====================
-
 WELCOME_TEXT = """😉😌😍🥰😉😌😇🙂 Xin chào các thành viên Entry247 🚀
 
 Chúc mừng bạn đã gia nhập 
 Entry247 | Premium Signals 🇻🇳
 
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng , dành riêng cho những trader nghiêm túc ✅
+Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
 
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢"""
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+"""
 
 MENU = [
     ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880#gid=247967880"),
@@ -47,7 +45,13 @@ def build_sub_keyboard(index):
     if index == 0:
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("📊 Xem dữ liệu", url=MENU[index][1])],
-            [InlineKeyboardButton("📺 Hướng dẫn đọc số liệu", callback_data="guide_video")],
+            [InlineKeyboardButton("📺 Hướng dẫn đọc số liệu", callback_data="guide_data")],
+            [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
+        ])
+    elif index == 1:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔗 Xin vào nhóm", url=MENU[index][1])],
+            [InlineKeyboardButton("📺 Hướng dẫn đọc số liệu", callback_data="guide_bcoin")],
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
     else:
@@ -62,35 +66,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     if query.data == "main_menu":
         await query.edit_message_text(WELCOME_TEXT, reply_markup=build_main_keyboard())
-    
-    elif query.data == "guide_video":
-        await query.edit_message_text(
-            "🎥 Link video hướng dẫn sẽ được bổ sung sau. Vui lòng quay lại sau nhé.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_0")]
-            ])
-        )
-    
+
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(
             f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index)
         )
 
-# ===================== MAIN =====================
-
-if __name__ == "__main__":
-    # Start Flask server in background
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-
-    # Start Telegram bot
-    app_telegram.add_handler(CommandHandler("start", start))
-    app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
-
-    print("🚀 Starting Telegram bot polling...")
-    app_telegram.run_polling()
+    elif query.data == "guide_data":
+        await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung sau.")
+    elif query.data == "guide_bcoin":
+        await query.message.reply_text("📺_
