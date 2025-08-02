@@ -1,5 +1,6 @@
+import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Hàm khởi đầu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -26,7 +27,7 @@ Chúc mừng bạn đã gia nhập Entry247 | Premium Signals 🇻🇳
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
-# Xử lý callback
+# Phản hồi khi chọn button
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -69,15 +70,18 @@ Bạn có ý tưởng? Gửi cho admin nhé 🕯""",
     response = responses.get(data, "❗ Đã có lỗi xảy ra. Vui lòng thử lại.")
     await query.edit_message_text(response, parse_mode='Markdown', disable_web_page_preview=False)
 
-# Chạy bot
-if __name__ == '__main__':
-    import os
-
+# Hàm chạy chính
+async def main():
     TOKEN = os.getenv("BOT_TOKEN") or "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
+    app: Application = ApplicationBuilder().token(TOKEN).build()
 
-    app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_button))
 
-    print("🤖 Entry247 Bot đang chạy...")
-    app.run_polling()
+    print("🤖 Bot đang khởi chạy...")
+    await app.run_polling()
+
+# Gọi chạy
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())
