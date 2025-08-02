@@ -23,13 +23,15 @@ WELCOME_TEXT = """🌟 Xin chào các thành viên Entry247 🚀
 – Dành cho những trader nghiêm túc muốn giao dịch có kỷ luật và hiệu quả.
 
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính bên dưới .
+📌 Mọi thông tin liên hệ và góp ý
+Admin @Entry247
 """
 
 MENU = [
     ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880#gid=247967880"),
     ("2️⃣ Dữ liệu BCoin_Push", "https://t.me/Entry247_Push"),
     ("3️⃣ Cộng đồng Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
-    ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
+    ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+X6ibaOa_ETVhNTY1"),
     ("5️⃣ Tool Độc quyền", ""),
     ("6️⃣ Học và Hiểu (Video)", ""),
 ]
