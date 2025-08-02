@@ -71,4 +71,28 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(WELCOME_MESSAGE, reply_markup=reply_markup)
 
-# ====== Bot + Flask Setup
+# ====== Bot + Flask Setup ======
+
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def index():
+    return '🌐 Flask giữ bot luôn sống...'
+
+async def run_bot():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_callback))
+
+    print("🤖 Bot Telegram đang chạy...")
+    await app.run_polling()
+
+def start_flask():
+    flask_app.run(host="0.0.0.0", port=10000)
+
+# ====== Main Start ======
+
+if __name__ == "__main__":
+    threading.Thread(target=start_flask).start()
+    asyncio.run(run_bot())
