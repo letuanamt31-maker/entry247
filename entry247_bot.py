@@ -15,23 +15,11 @@ def index():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
-WELCOME_TEXT = """🌟 Xin chào các thành viên Entry247 🚀
-"Vào lệnh đúng – nghỉ ngơi khoẻ"
-
-💎 Entry247 | Premium Signals 🇻🇳
-- Nơi tập hợp tín hiệu giao dịch, dữ liệu chuẩn xác và chiến lược rõ ràng 
-– Dành cho những trader nghiêm túc muốn giao dịch có kỷ luật và hiệu quả.
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính bên dưới .
-📌 Mọi thông tin liên hệ và góp ý
-Admin @Entry247
-"""
-
 MENU = [
     ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880#gid=247967880"),
-    ("2️⃣ Dữ liệu BCoin_Push", "https://t.me/Entry247_Push"),
-    ("3️⃣ Cộng đồng Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
-    ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+X6ibaOa_ETVhNTY1"),
+    ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
+    ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
+    ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
     ("5️⃣ Tool Độc quyền", ""),
     ("6️⃣ Học và Hiểu (Video)", ""),
 ]
@@ -80,19 +68,40 @@ def build_sub_keyboard(index):
         ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(WELCOME_TEXT, reply_markup=build_main_keyboard())
+    user_firstname = update.effective_user.first_name or "bạn"
+    welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
+
+Chào mừng bạn tìm hiểu Entry247 Premium
+Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , dành riêng cho những trader nghiêm túc ✅
+
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+📌 Mọi thông tin liên hệ và góp ý
+Admin @Entry247
+"Cùng vào lệnh đúng – nghỉ ngơi khoẻ"
+
+"""
+    await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
 
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     if query.data == "main_menu":
-        await query.edit_message_text(WELCOME_TEXT, reply_markup=build_main_keyboard())
+        user_firstname = query.from_user.first_name or "bạn"
+        welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
+
+
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+"""
+        await query.edit_message_text(welcome_text, reply_markup=build_main_keyboard())
+
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(
             f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index)
         )
+
+    # Nội dung phụ trợ
     elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung sau.")
     elif query.data == "guide_bcoin":
