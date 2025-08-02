@@ -1,7 +1,6 @@
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-import asyncio
 import threading
 
 BOT_TOKEN = '7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4'
@@ -31,8 +30,8 @@ MENU = [
     ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
     ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
     ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
-    ("5️⃣ Tool Độc quyền", "https://t.me/Entry247"),
-    ("6️⃣ Học và Hiểu (Video)", "https://t.me/Entry247"),
+    ("5️⃣ Tool Độc quyền", ""),
+    ("6️⃣ Học và Hiểu (Video)", ""),
 ]
 
 def build_main_keyboard():
@@ -54,9 +53,27 @@ def build_sub_keyboard(index):
             [InlineKeyboardButton("📺 Hướng dẫn đọc số liệu", callback_data="guide_bcoin")],
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
-    else:
+    elif index == 2:
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("📖 Xem hướng dẫn", url=MENU[index][1])],
+            [InlineKeyboardButton("🔗 Xin vào nhóm", url=MENU[index][1])],
+            [InlineKeyboardButton("📺 Tìm hiểu nhóm", callback_data="info_group_3")],
+            [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
+        ])
+    elif index == 3:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔗 Xin vào nhóm", url=MENU[index][1])],
+            [InlineKeyboardButton("📺 Tìm hiểu nhóm", callback_data="info_group_4")],
+            [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
+        ])
+    elif index == 4:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("🛠️ Entry247 đang hoàn thiện, sẽ public Free 100% trong Premium", callback_data="tool_info")],
+            [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
+        ])
+    elif index == 5:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("▶️ Đi đúng từ đầu", callback_data="video_start_right")],
+            [InlineKeyboardButton("❗ Biết để tránh", callback_data="video_avoid")],
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
 
@@ -76,7 +93,16 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index)
         )
 
+    # Callback text replies
     elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung sau.")
     elif query.data == "guide_bcoin":
-        await query.message.reply_text("📺_
+        await query.message.reply_text("📺 Hướng dẫn sử dụng nhóm Bcoin sẽ được bổ sung sau.")
+    elif query.data == "info_group_3":
+        await query.message.reply_text("📺 Tìm hiểu nhóm Premium Signals sẽ được bổ sung sau.")
+    elif query.data == "info_group_4":
+        await query.message.reply_text("📺 Tìm hiểu nhóm Trader Talk sẽ được bổ sung sau.")
+    elif query.data == "tool_info":
+        await query.message.reply_text("🛠️ Entry247 đang hoàn thiện, sẽ public Free 100% trong Premium.")
+    elif query.data == "video_start_right":
+        await query.message.reply_text_
