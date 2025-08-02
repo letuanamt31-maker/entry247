@@ -15,13 +15,14 @@ def index():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
-WELCOME_TEXT = """😉😌😍🥰😉😌😇🙂 Xin chào các thành viên Entry247 🚀
+WELCOME_TEXT = """Xin chào các thành viên Entry247 🚀
 
-Chúc mừng bạn đã gia nhập 
+Bạn đang tìm hiểu và cũng đang tìm hiểu 
 Entry247 | Premium Signals 🇻🇳
 
 Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
-
+Chúng tôi không thu bất kỳ khoản phí dịch vụ nào 
+Hãy đăng ký cùng về team Entry247 nào !
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
@@ -86,14 +87,11 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "main_menu":
         await query.edit_message_text(WELCOME_TEXT, reply_markup=build_main_keyboard())
-
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(
             f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index)
         )
-
-    # Callback text replies
     elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung sau.")
     elif query.data == "guide_bcoin":
