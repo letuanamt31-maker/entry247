@@ -1,86 +1,82 @@
 import os
-from aiohttp import web
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
+import asyncio
+from telegram import (
+    InlineKeyboardButton, InlineKeyboardMarkup, Update
 )
+from telegram.ext import (
+    Application, CommandHandler, CallbackQueryHandler, ContextTypes
+)
+from aiohttp import web
 
-TOKEN = os.getenv("BOT_TOKEN") or "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
-PORT = int(os.environ.get("PORT", 1000))
-APP_URL = os.getenv("APP_URL") or "https://your-render-url.onrender.com"  # <- Đổi URL thật tại đây
+TOKEN = "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4"
 
-WELCOME_MESSAGE = """🟢 Xin chào các thành viên Entry247 🚀
+WELCOME_MESSAGE = """Xin chào các thành viên Entry247 🚀
 
-Chúc mừng bạn đã gia nhập  
+Chúc mừng bạn đã gia nhập
 Entry247 | Premium Signals 🇻🇳
 
 Nơi tổng hợp dữ liệu, tín hiệu và chiến lược giao dịch chất lượng, dành riêng cho những trader nghiêm túc ✅
 
-📌 Bạn có quyền truy cập vào 6 tài nguyên chính dưới đây:
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 """
 
 BUTTONS = [
-    ("1️⃣ Kênh dữ liệu Update 24/24", "data"),
-    ("2️⃣ BCoin_Push", "push"),
-    ("3️⃣ Entry247 | Premium Signals 🇻🇳", "signals"),
-    ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "talk"),
-    ("5️⃣ Tool Độc quyền, Free 100%", "tool"),
-    ("6️⃣ Học và hiểu ( Video )", "video"),
+    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880"),
+    ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
+    ("3️⃣ Entry247 | Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
+    ("4️⃣ Entry247 | Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
+    ("5️⃣ Tool Độc quyền, Free 100%", "https://t.me/+ghRLRK6fHeYzYzE1"),
+    ("6️⃣ Học và hiểu ( Video )", "https://t.me/+ghRLRK6fHeYzYzE1"),
+    ("📘 Xem hướng dẫn sử dụng", "HDSD")
 ]
 
-RESOURCES = {
-    "data": "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880",
-    "push": "https://t.me/Entry247_Push",
-    "signals": "https://t.me/+6yN39gbr94c0Zjk1",
-    "talk": "https://t.me/+eALbHBRF3xtlZWNl",
-    "tool": "https://t.me/+ghRLRK6fHeYzYzE1",
-    "video": "https://t.me/+ghRLRK6fHeYzYzE1",
-}
-
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
+    keyboard = [
+        [InlineKeyboardButton(text, callback_data=data if data == "HDSD" else f"URL|{url}")]
+        for text, url in BUTTONS
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(WELCOME_MESSAGE, reply_markup=reply_markup)
 
-
-async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data in RESOURCES:
-        text = f"""📎 Đây là tài nguyên bạn chọn:
+    data = query.data
+    if data.startswith("URL|"):
+        url = data.split("|", 1)[1]
+        await query.message.reply_text(f"👉 Mở liên kết: {url}")
+    elif data == "HDSD":
+        await query.message.reply_text(
+            "📘 *Hướng dẫn sử dụng bot:*\n\n"
+            "- Nhấn vào các nút để truy cập dữ liệu, tín hiệu và cộng đồng hỗ trợ.\n"
+            "- Trở lại menu chính bất kỳ lúc nào bằng cách nhấn nút 🔙 Quay lại.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Quay lại menu chính", callback_data="BACK")]
+            ]),
+            parse_mode='Markdown'
+        )
+    elif data == "BACK":
+        return await start(update, context)
 
-👉 {RESOURCES[query.data]}
-
-📘 *Hướng dẫn sử dụng:*
-- Truy cập link ở trên.
-- Theo dõi nội dung cập nhật mỗi ngày.
-- Chúc bạn giao dịch hiệu quả ✅"""
-        keyboard = [[InlineKeyboardButton("⬅️ Quay lại menu chính", callback_data="back")]]
-        await query.edit_message_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-    elif query.data == "back":
-        keyboard = [[InlineKeyboardButton(text, callback_data=data)] for text, data in BUTTONS]
-        await query.edit_message_text(text=WELCOME_MESSAGE, reply_markup=InlineKeyboardMarkup(keyboard))
-
+async def keep_alive():
+    async def handler(request):
+        return web.Response(text="✅ Bot is alive.")
+    app = web.Application()
+    app.router.add_get("/", handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 10000)
+    await site.start()
+    print("✅ Keep-alive HTTP server running on port 10000")
 
 async def main():
+    await keep_alive()
     app = Application.builder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_button))
-
-    # Khởi động webhook
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=f"{APP_URL}/"
-    )
-
+    app.add_handler(CallbackQueryHandler(handle_callback))
+    print("🤖 Entry247 Bot đang chạy...")
+    await app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
