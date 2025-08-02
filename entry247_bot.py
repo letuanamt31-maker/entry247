@@ -94,6 +94,11 @@ def home():
     return "🌐 Flask giữ bot luôn sống..."
 
 
+import nest_asyncio
+nest_asyncio.apply()
+
 if __name__ == "__main__":
-    threading.Thread(target=lambda: asyncio.run(run_bot())).start()
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())
     flask_app.run(host="0.0.0.0", port=10000)
+
