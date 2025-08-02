@@ -50,7 +50,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # Hàm chạy bot
+import asyncio
+
 def run_bot():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     app_telegram = ApplicationBuilder().token(TOKEN).build()
     app_telegram.add_handler(CommandHandler("start", start))
     print("🤖 Bot Telegram đang chạy...")
