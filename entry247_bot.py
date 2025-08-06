@@ -110,7 +110,7 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
     elif query.data == "guide_bcoin":
         # Gửi video từ file_id (sau khi bạn đã từng upload video này lên bot)
         file_id = "BAACAgUAAxkBAAIB1WZkYTGc4m-BKTIzqQnUj0AfkFL-AAIuCgAC9LUQV65omKa7ep5sNAQ"  # Cập nhật nếu cần
-        await context.bot.send_video(chat_id=query.message.chat_id, video=file_id, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
+        await context.bot.send_video(chat_id=query.message.chat_id, video=BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
 
     elif query.data == "info_group_3":
         await query.message.reply_text("📺 Tìm hiểu nhóm Premium Signals sẽ được bổ sung sau.")
