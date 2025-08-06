@@ -96,17 +96,13 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
-        except:
-            pass
-        await context.bot.send_message(chat_id=chat_id, text=f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
+        await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
 
     elif query.data.startswith("guide_"):
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
-        except:
-            pass
+        except Exception as e:
+            print(f"Không thể xoá video cũ: {e}")
         await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn sử dụng")
 
     elif query.data == "info_group_5":
