@@ -72,6 +72,9 @@ def save_user(user):
     except Exception as e:
         print(f"Error saving user: {e}")
 
+# ======================== GLOBAL ==========================
+last_video_message = {}
+
 # ======================== /START ==========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -87,48 +90,4 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "main_menu":
         try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
-        except:
-            pass
-        user = query.from_user
-        welcome_text = f"""🌟 Xin chào {user.first_name or 'bạn'} 🚀\n\nChào mừng bạn tìm hiểu Entry247 Premium\nNơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , dành riêng cho những trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin liên hệ và góp ý: Admin @Entry247"""
-        await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
-
-    elif query.data.startswith("menu_"):
-        index = int(query.data.split("_")[1])
-        await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
-
-    elif query.data.startswith("guide_"):
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
-        except Exception as e:
-            print(f"Không thể xoá video cũ: {e}")
-        await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn sử dụng")
-
-    elif query.data == "info_group_5":
-        await query.message.reply_text("📺 Altcoin Signals sẽ public Free 100% trong Premium.")
-
-    elif query.data == "video_start_right":
-        await query.message.reply_text("▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung sau.")
-
-    elif query.data == "video_avoid":
-        await query.message.reply_text("❗ Video 'Biết để tránh' sẽ được bổ sung sau.")
-
-# ==================== SAVE VIDEO FILE ID ==================
-async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.video:
-        file_id = update.message.video.file_id
-        await update.message.reply_text(f"🎥 File ID: `{file_id}`", parse_mode="Markdown")
-
-# ========================= RUN ============================
-if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-
-    app_telegram.add_handler(CommandHandler("start", start))
-    app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
-    app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
-
-    print("🚀 Bot is running...")
-    app_telegram.run_polling()
+            await context.bot.delete_m
