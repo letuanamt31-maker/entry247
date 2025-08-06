@@ -88,11 +88,27 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    chat_id = query.message.chat_id
+    message_id = query.message.message_id
+
     if query.data == "main_menu":
+        # Xoá tin nhắn hiện tại (có thể là video, text, v.v.)
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+        except:
+            pass  # Nếu xoá lỗi (ví dụ đã xoá rồi), bỏ qua
+
+        # Gửi lại menu chính
         user_firstname = query.from_user.first_name or "bạn"
         welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
 
+Chào mừng bạn tìm hiểu Entry247 Premium
+Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , dành riêng cho những trader nghiêm túc ✅
+
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+📌 Mọi thông tin liên hệ và góp ý: Admin @Entry247
+"""
+        await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
 """
         await query.edit_message_text(welcome_text, reply_markup=build_main_keyboard())
 
