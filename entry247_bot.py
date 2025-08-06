@@ -92,13 +92,16 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = query.message.message_id
 
     if query.data == "main_menu":
-        # Xoá tin nhắn hiện tại (có thể là video, text, v.v.)
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        except:
-            pass  # Nếu xoá lỗi (ví dụ đã xoá rồi), bỏ qua
 
-        # Gửi lại menu chính
+            last_video_id = context.user_data.get('last_video')
+            if last_video_id:
+                await context.bot.delete_message(chat_id=chat_id, message_id=last_video_id)
+                context.user_data['last_video'] = None
+        except:
+            pass
+
         user_firstname = query.from_user.first_name or "bạn"
         welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
 
@@ -109,8 +112,6 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
 📌 Mọi thông tin liên hệ và góp ý: Admin @Entry247
 """
         await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
-"""
-        await query.edit_message_text(welcome_text, reply_markup=build_main_keyboard())
 
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
@@ -120,9 +121,9 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung sau.")
 
     elif query.data == "guide_bcoin":
-        # Gửi video từ file_id (sau khi bạn đã từng upload video này lên bot)
-        file_id = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"  # Cập nhật nếu cần
-        await context.bot.send_video(chat_id=query.message.chat_id, video=file_id, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
+        file_id = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"
+        msg = await context.bot.send_video(chat_id=query.message.chat_id, video=file_id, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
+        context.user_data['last_video'] = msg.message_id
 
     elif query.data == "info_group_3":
         await query.message.reply_text("📺 Tìm hiểu nhóm Premium Signals sẽ được bổ sung sau.")
@@ -147,15 +148,13 @@ async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================= Khởi động bot =======================
 if __name__ == "__main__":
-    # Chạy Flask song song
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    # Handlers
     app_telegram.add_handler(CommandHandler("start", start))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
-    app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))  # Nhận video và hiển thị file_id
+    app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
 
     print("🚀 Starting Telegram bot polling...")
     app_telegram.run_polling()
