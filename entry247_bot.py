@@ -92,11 +92,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_firstname = query.from_user.first_name or "bạn"
         welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
 
-Chào mừng bạn tìm hiểu Entry247 Premium
-Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , dành riêng cho những trader nghiêm túc ✅
-
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
-📌 Mọi thông tin liên hệ và góp ý: Admin @Entry247
 """
         await query.edit_message_text(welcome_text, reply_markup=build_main_keyboard())
 
@@ -109,7 +105,7 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
 
     elif query.data == "guide_bcoin":
         # Gửi video từ file_id (sau khi bạn đã từng upload video này lên bot)
-        file_id = "BAACAgUAAxkBAAIB1WZkYTGc4m-BKTIzqQnUj0AfkFL-AAIuCgAC9LUQV65omKa7ep5sNAQ"  # Cập nhật nếu cần
+        file_id = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"  # Cập nhật nếu cần
         await context.bot.send_video(chat_id=query.message.chat_id, video=BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
 
     elif query.data == "info_group_3":
