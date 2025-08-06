@@ -25,7 +25,7 @@ MENU = [
     ("6️⃣ Học và Hiểu (Video)", ""),
 ]
 
-# =================== Bàn phím =========================
+# =================== BÀN PHÍM =========================
 def build_main_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(text, callback_data=f"menu_{i}")]
@@ -59,8 +59,7 @@ def build_sub_keyboard(index):
         ])
     elif index == 4:
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔗 Xin vào nhóm", url=MENU[index][1])],
-            [InlineKeyboardButton("📺 Tìm hiểu nhóm", callback_data="info_group_5")],
+            [InlineKeyboardButton("Entr247 đang hoàn thiện", callback_data="info_group_5")],
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
     elif index == 5:
@@ -70,7 +69,7 @@ def build_sub_keyboard(index):
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
 
-# =================== Lệnh /start ======================
+# =================== LỆNH /START ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_firstname = update.effective_user.first_name or "bạn"
     welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
@@ -83,7 +82,7 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
 """
     await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
 
-# ================ Xử lý nút nhấn ======================
+# ================== XỬ LÝ NÚT NHẤN ====================
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -94,11 +93,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "main_menu":
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-
-            last_video_id = context.user_data.get('last_video')
-            if last_video_id:
-                await context.bot.delete_message(chat_id=chat_id, message_id=last_video_id)
-                context.user_data['last_video'] = None
         except:
             pass
 
@@ -122,8 +116,7 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
 
     elif query.data == "guide_bcoin":
         file_id = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"
-        msg = await context.bot.send_video(chat_id=query.message.chat_id, video=file_id, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
-        context.user_data['last_video'] = msg.message_id
+        await context.bot.send_video(chat_id=chat_id, video=file_id, caption="📺 Hướng dẫn sử dụng nhóm BCoin")
 
     elif query.data == "info_group_3":
         await query.message.reply_text("📺 Tìm hiểu nhóm Premium Signals sẽ được bổ sung sau.")
@@ -132,7 +125,7 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
         await query.message.reply_text("📺 Tìm hiểu nhóm Trader Talk sẽ được bổ sung sau.")
 
     elif query.data == "info_group_5":
-        await query.message.reply_text("📺 Tìm hiểu nhóm Altcoin Season sẽ được bổ sung sau.")
+        await query.message.reply_text("📺 Altcoin Signals sẽ public Free 100% trong Premium.")
 
     elif query.data == "video_start_right":
         await query.message.reply_text("▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung sau.")
@@ -140,13 +133,13 @@ Nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , 
     elif query.data == "video_avoid":
         await query.message.reply_text("❗ Video 'Biết để tránh' sẽ được bổ sung sau.")
 
-# ============= Lấy file_id khi bạn gửi video ==========
+# ============= NHẬN VIDEO → TRẢ FILE_ID ===============
 async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.video:
         file_id = update.message.video.file_id
         await update.message.reply_text(f"🎥 File ID của video là:\n\n`{file_id}`", parse_mode="Markdown")
 
-# ================= Khởi động bot =======================
+# ================= CHẠY SONG SONG ======================
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
