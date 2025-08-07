@@ -8,9 +8,9 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ========== CONFIG ==========
-BOT_TOKEN = '7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4'
-VIDEO_FILE_ID = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"
-SPREADSHEET_ID = "1fpBfphrqJEZYgV-2BZ_a9vHTxlXWLBe1feZJd_M7dlQ"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4")
+VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID", "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ")
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID", "1fpBfphrqJEZYgV-2BZ_a9vHTxlXWLBe1feZJd_M7dlQ")
 
 # ========== FLASK ==========
 app_flask = Flask(__name__)
