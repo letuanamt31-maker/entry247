@@ -72,13 +72,23 @@ def save_user(user):
     except Exception as e:
         print(f"Error saving user: {e}")
 
+# ================= XOÁ TIN NHẮN CŨ ========================
+async def delete_old_messages(chat_id, context):
+    message_ids = context.user_data.get("messages_to_delete", [])
+    for msg_id in message_ids:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        except Exception as e:
+            print(f"❌ Không thể xoá message {msg_id}: {e}")
+    context.user_data["messages_to_delete"] = []
+
 # ======================== /START ==========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     save_user(user)
     welcome_text = f"""🌟 Xin chào {user.first_name or 'bạn'} 🚀\n\nChào mừng bạn tìm hiểu Entry247 Premium\nNơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , dành riêng cho những trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin liên hệ và góp ý: Admin @Entry247"""
-    sent_msg = await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
-    context.user_data.setdefault("messages_to_delete", []).append(sent_msg.message_id)
+    msg = await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
+    context.user_data.setdefault("messages_to_delete", []).append(msg.message_id)
 
 # ==================== BUTTON HANDLER ======================
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -87,31 +97,20 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = query.message.chat.id
 
     if query.data == "main_menu":
-        # Xoá các tin nhắn cũ
-        for msg_id in context.user_data.get("messages_to_delete", []):
-            try:
-                await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
-            except Exception as e:
-                print(f"Không thể xoá message {msg_id}: {e}")
-        context.user_data["messages_to_delete"] = []
-
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
-        except:
-            pass
-
+        await delete_old_messages(chat_id, context)
         user = query.from_user
         welcome_text = f"""🌟 Xin chào {user.first_name or 'bạn'} 🚀\n\nChào mừng bạn tìm hiểu Entry247 Premium\nNơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto , dành riêng cho những trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin liên hệ và góp ý: Admin @Entry247"""
-        sent_msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
-        context.user_data["messages_to_delete"].append(sent_msg.message_id)
+        msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
+        context.user_data.setdefault("messages_to_delete", []).append(msg.message_id)
 
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
-        await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
+        msg = await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
+        context.user_data.setdefault("messages_to_delete", []).append(msg.message_id)
 
     elif query.data.startswith("guide_"):
-        sent_video = await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn sử dụng")
-        context.user_data.setdefault("messages_to_delete", []).append(sent_video.message_id)
+        msg = await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn sử dụng")
+        context.user_data.setdefault("messages_to_delete", []).append(msg.message_id)
 
     elif query.data == "info_group_5":
         msg = await query.message.reply_text("📺 Altcoin Signals sẽ public Free 100% trong Premium.")
@@ -129,7 +128,8 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.video:
         file_id = update.message.video.file_id
-        await update.message.reply_text(f"🎥 File ID: `{file_id}`", parse_mode="Markdown")
+        msg = await update.message.reply_text(f"🎥 File ID: `{file_id}`", parse_mode="Markdown")
+        context.user_data.setdefault("messages_to_delete", []).append(msg.message_id)
 
 # ========================= RUN ============================
 if __name__ == "__main__":
