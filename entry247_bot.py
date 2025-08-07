@@ -2,7 +2,7 @@ import os
 import json
 import threading
 import logging
-from flask import Flask, request, abort  # ✅ Đã thêm dòng này
+from flask import Flask, request, abort
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -26,12 +26,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-
 logger = logging.getLogger(__name__)
 
 # ==================== Google Sheets ============================
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
 sheet = None
 
 try:
@@ -50,7 +48,7 @@ try:
 except Exception as e:
     logger.warning(f"⚠️ Không thể kết nối Google Sheets: {e}")
 
-# ==================== Flask App ===============================
+# ==================== Flask App ================================
 app_flask = Flask(__name__)
 
 @app_flask.route("/")
@@ -73,7 +71,7 @@ def admin_status():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
-# ==================== Telegram Bot ============================
+# ==================== Telegram Bot =============================
 app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
 MENU = [
@@ -129,7 +127,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     chat_id = query.message.chat_id
     message_id = query.message.message_id
-
     user = update.effective_user
 
     if query.data == "main_menu":
