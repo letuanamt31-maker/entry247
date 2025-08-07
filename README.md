@@ -10,7 +10,7 @@ Bot Telegram hỗ trợ người dùng truy cập tài nguyên học crypto cao 
 - `README.md` – mô tả dự án
 
 ## 🚀 Hướng dẫn chạy
-
+Tham gia cộng đồng cùng chúng tôi và trải nghiệm miễn phí công cụ trading Crypto .
 ### 1. Local
 
 ```bash
