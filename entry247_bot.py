@@ -3,57 +3,57 @@ import json
 import base64
 import logging
 import threading
-from datetime import datetime
-
 from flask import Flask
 from dotenv import load_dotenv
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters
 )
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
-# ======================= Load .env =============================
+# ============ Load .env =============
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+GOOGLE_CREDS_BASE64 = os.getenv("GOOGLE_CREDS_BASE64")
 
-# ======= Decode GOOGLE_CREDS_BASE64 and save as service_account.json ========
-base64_str = os.getenv("GOOGLE_CREDS_BASE64")
-if base64_str:
-    try:
-        creds_json = base64.b64decode(base64_str).decode("utf-8")
-        with open("service_account.json", "w") as f:
-            f.write(creds_json)
-        print("✅ Đã giải mã service_account.json")
-    except Exception as e:
-        raise Exception(f"❌ Giải mã base64 thất bại: {e}")
+# ============ Giải mã và lưu file service_account.json ============
+creds_path = "/tmp/service_account.json"
+if GOOGLE_CREDS_BASE64:
+    with open(creds_path, "wb") as f:
+        f.write(base64.b64decode(GOOGLE_CREDS_BASE64))
+    print("✅ Đã giải mã service_account.json")
 else:
-    raise Exception("❌ GOOGLE_CREDS_BASE64 không tồn tại.")
+    raise Exception("❌ Thiếu GOOGLE_CREDS_BASE64")
 
-# ==================== Google Sheets ============================
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
+# ============ Kết nối Google Sheet ============
 try:
-    creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
-    gc = gspread.authorize(creds)
-
-    if not SPREADSHEET_ID:
-        raise ValueError("SPREADSHEET_ID chưa được cung cấp.")
-
+    scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    credentials = Credentials.from_service_account_file(creds_path, scopes=scopes)
+    gc = gspread.authorize(credentials)
     spreadsheet = gc.open_by_key(SPREADSHEET_ID)
-    sheet_users = spreadsheet.worksheet("Users")
-    sheet_logs = spreadsheet.worksheet("Logs")
+
+    def get_or_create_worksheet(title, headers):
+        try:
+            ws = spreadsheet.worksheet(title)
+        except gspread.exceptions.WorksheetNotFound:
+            ws = spreadsheet.add_worksheet(title=title, rows="100", cols="20")
+            ws.append_row(headers)
+        return ws
+
+    sheet_users = get_or_create_worksheet("Users", ["ID", "Tên", "Username"])
+    sheet_logs = get_or_create_worksheet("Logs", ["Hành động", "ID", "Tên", "Thời gian"])
 
     print("✅ Đã kết nối Google Sheets")
 except Exception as e:
+    logging.error(f"❌ Lỗi kết nối Google Sheet: {e}")
     raise Exception(f"❌ Lỗi kết nối Google Sheet: {e}")
 
-# ==================== Flask App ===============================
+# ============ Flask =================
 app_flask = Flask(__name__)
 
 @app_flask.route("/")
@@ -63,11 +63,11 @@ def index():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
-# ==================== Telegram Bot ============================
+# ============ Telegram ==============
 app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
 MENU = [
-    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/..."),
+    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/..."),
     ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
     ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
     ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
@@ -83,7 +83,7 @@ def build_main_keyboard():
 
 def build_sub_keyboard(index):
     items = []
-    if index in [0, 1, 2, 3, 4]:
+    if index in range(5):
         items.append([InlineKeyboardButton("🔗 Xem nội dung", url=MENU[index][1])])
     if index == 0:
         items.append([InlineKeyboardButton("📺 Hướng dẫn đọc số liệu", callback_data="guide_data")])
@@ -105,26 +105,27 @@ def build_sub_keyboard(index):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    chat_id = update.effective_chat.id
+    uid = user.id
+    name = user.full_name
+    username = user.username or ""
 
-    user_data = [str(user.id), user.first_name or "", user.username or "", str(datetime.now())]
+    # Log người dùng mới
+    existing_ids = [row[0] for row in sheet_users.get_all_values()[1:]]
+    if str(uid) not in existing_ids:
+        sheet_users.append_row([str(uid), name, username])
 
-    # === Ghi user vào sheet Users nếu chưa có ===
-    existing_ids = sheet_users.col_values(1)
-    if str(user.id) not in existing_ids:
-        sheet_users.append_row(user_data[:3])
+    # Ghi log hành động
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sheet_logs.append_row(["/start", str(uid), name, now])
 
-    # === Ghi log hành động ===
-    sheet_logs.append_row(["/start", str(user.id), user.first_name or "", str(datetime.now())])
-
-    welcome_text = f"""🌟 Xin chào {user.first_name} 🚀
+    welcome_text = f"""🌟 Xin chào {user.first_name or "bạn"} 🚀
 
 Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
 
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 📌 Mọi thông tin góp ý: @Entry247
 """
-    await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
+    await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
 
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -133,20 +134,28 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = query.message.message_id
 
     if query.data == "main_menu":
-        await context.bot.delete_message(chat_id, message_id)
-        await context.bot.send_message(chat_id, "🌟 Menu chính", reply_markup=build_main_keyboard())
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+        except:
+            pass
+        user_firstname = query.from_user.first_name or "bạn"
+        welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
+
+Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
+
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+📌 Mọi thông tin góp ý: @Entry247
+"""
+        await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
     elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung.")
     elif query.data == "guide_bcoin":
-        if VIDEO_FILE_ID:
-            await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn nhóm BCoin")
-        else:
-            await query.message.reply_text("⚠️ VIDEO_FILE_ID chưa được cấu hình.")
+        await query.message.reply_text("📺 Hướng dẫn nhóm BCoin sẽ được bổ sung.")
     elif query.data == "info_group_3":
-        await query.message.reply_text("📺 Premium Signals sẽ được bổ sung.")
+        await query.message.reply_text("📺 Premium Signals là gì? sẽ được bổ sung.")
     elif query.data == "info_group_4":
         await query.message.reply_text("📺 Trader Talk sẽ được bổ sung.")
     elif query.data == "info_group_5":
@@ -156,22 +165,16 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "video_avoid":
         await query.message.reply_text("❗ Video 'Biết để tránh' sẽ được bổ sung.")
 
-async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def save_video_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.video:
         file_id = update.message.video.file_id
         await update.message.reply_text(f"🎥 File ID của video là:\n\n`{file_id}`", parse_mode="Markdown")
 
-# ==================== Start App ===============================
+# ============ Khởi động ============
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-
+    threading.Thread(target=run_flask, daemon=True).start()
     app_telegram.add_handler(CommandHandler("start", start))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
-    app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
-
+    app_telegram.add_handler(MessageHandler(filters.VIDEO, save_video_id))
     print("🚀 Bot đang chạy polling Telegram...")
     app_telegram.run_polling()
