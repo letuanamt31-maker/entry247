@@ -1,8 +1,11 @@
 import os
 import json
-import threading
+import base64
 import logging
-from flask import Flask, request, abort
+import threading
+from datetime import datetime
+
+from flask import Flask
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -10,7 +13,7 @@ from telegram.ext import (
     MessageHandler, ContextTypes, filters
 )
 import gspread
-from google.oauth2.service_account import Credentials
+from oauth2client.service_account import ServiceAccountCredentials
 
 # ======================= Load .env =============================
 load_dotenv()
@@ -18,37 +21,37 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-GOOGLE_CREDS_PATH = os.getenv("GOOGLE_CREDS_PATH")
-SECRET_TOKEN = os.getenv("SECRET", "entry247")
 
-# ==================== Logging setup ============================
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# ======= Decode GOOGLE_CREDS_BASE64 and save as service_account.json ========
+base64_str = os.getenv("GOOGLE_CREDS_BASE64")
+if base64_str:
+    try:
+        creds_json = base64.b64decode(base64_str).decode("utf-8")
+        with open("service_account.json", "w") as f:
+            f.write(creds_json)
+        print("✅ Đã giải mã service_account.json")
+    except Exception as e:
+        raise Exception(f"❌ Giải mã base64 thất bại: {e}")
+else:
+    raise Exception("❌ GOOGLE_CREDS_BASE64 không tồn tại.")
 
 # ==================== Google Sheets ============================
-scope = ["https://www.googleapis.com/auth/spreadsheets"]
-sheet = None
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
 try:
-    if not GOOGLE_CREDS_PATH or not os.path.exists(GOOGLE_CREDS_PATH):
-        raise FileNotFoundError("File service_account.json không tồn tại hoặc GOOGLE_CREDS_PATH không đúng.")
-
-    credentials = Credentials.from_service_account_file(
-        GOOGLE_CREDS_PATH,
-        scopes=scope
-    )
-    gc = gspread.authorize(credentials)
+    creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+    gc = gspread.authorize(creds)
 
     if not SPREADSHEET_ID:
-        raise ValueError("SPREADSHEET_ID không được thiết lập.")
+        raise ValueError("SPREADSHEET_ID chưa được cung cấp.")
 
-    sheet = gc.open_by_key(SPREADSHEET_ID)
-    logger.info("✅ Đã kết nối Google Sheets")
+    spreadsheet = gc.open_by_key(SPREADSHEET_ID)
+    sheet_users = spreadsheet.worksheet("Users")
+    sheet_logs = spreadsheet.worksheet("Logs")
+
+    print("✅ Đã kết nối Google Sheets")
 except Exception as e:
-    logger.error(f"❌ Lỗi kết nối Google Sheet: {e}")
+    raise Exception(f"❌ Lỗi kết nối Google Sheet: {e}")
 
 # ==================== Flask App ===============================
 app_flask = Flask(__name__)
@@ -57,18 +60,6 @@ app_flask = Flask(__name__)
 def index():
     return "✅ Entry247 bot đang chạy!"
 
-@app_flask.route("/admin/status")
-def admin_status():
-    token = request.args.get("token")
-    if token != SECRET_TOKEN:
-        abort(403)
-    sheet_status = "✅ Google Sheets OK" if sheet else "❌ Không kết nối Google Sheets"
-    return f"""
-    ✅ Bot hoạt động<br>
-    {sheet_status}<br>
-    🔐 Admin xác thực OK
-    """
-
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
@@ -76,7 +67,7 @@ def run_flask():
 app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
 MENU = [
-    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=247967880#gid=247967880"),
+    ("1️⃣ Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/..."),
     ("2️⃣ BCoin_Push", "https://t.me/Entry247_Push"),
     ("3️⃣ Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1"),
     ("4️⃣ Premium Trader Talk 🇻🇳", "https://t.me/+eALbHBRF3xtlZWNl"),
@@ -113,34 +104,44 @@ def build_sub_keyboard(index):
     return InlineKeyboardMarkup(items)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_firstname = update.effective_user.first_name or "bạn"
-    welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
+    user = update.effective_user
+    chat_id = update.effective_chat.id
 
-Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto dành riêng cho những trader nghiêm túc ✅
+    user_data = [str(user.id), user.first_name or "", user.username or "", str(datetime.now())]
+
+    # === Ghi user vào sheet Users nếu chưa có ===
+    existing_ids = sheet_users.col_values(1)
+    if str(user.id) not in existing_ids:
+        sheet_users.append_row(user_data[:3])
+
+    # === Ghi log hành động ===
+    sheet_logs.append_row(["/start", str(user.id), user.first_name or "", str(datetime.now())])
+
+    welcome_text = f"""🌟 Xin chào {user.first_name} 🚀
+
+Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
 
 🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
 📌 Mọi thông tin góp ý: @Entry247
 """
-    await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
-    await log_user_to_sheets(update.effective_user, "start")
+    await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
 
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
     message_id = query.message.message_id
-    user = update.effective_user
 
     if query.data == "main_menu":
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        except:
-            pass
-        await context.bot.send_message(chat_id=chat_id, text="🌟 Menu chính", reply_markup=build_main_keyboard())
+        await context.bot.delete_message(chat_id, message_id)
+        await context.bot.send_message(chat_id, "🌟 Xin chào {user.first_name} 🚀
+
+Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
+
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢", reply_markup=build_main_keyboard())
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
-        await log_user_to_sheets(user, MENU[index][0])
     elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung.")
     elif query.data == "guide_bcoin":
@@ -164,34 +165,10 @@ async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_id = update.message.video.file_id
         await update.message.reply_text(f"🎥 File ID của video là:\n\n`{file_id}`", parse_mode="Markdown")
 
-async def log_user_to_sheets(user, action):
-    if sheet is None:
-        return
-    try:
-        users_ws = sheet.worksheet("Users")
-        logs_ws = sheet.worksheet("Logs")
-
-        users = users_ws.get_all_records()
-        user_ids = [str(u['ID']) for u in users]
-
-        if str(user.id) not in user_ids:
-            users_ws.append_row([
-                str(user.id),
-                user.username or "",
-                user.full_name or ""
-            ])
-        logs_ws.append_row([
-            str(user.id),
-            user.username or "",
-            user.full_name or "",
-            action
-        ])
-        logger.info(f"📌 Log: {user.id} - {action}")
-    except Exception as e:
-        logger.warning(f"❗ Không thể ghi log vào Google Sheets: {e}")
-
-# ==================== Start =====================
+# ==================== Start App ===============================
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
@@ -200,5 +177,5 @@ if __name__ == "__main__":
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
     app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
 
-    logger.info("🚀 Bot đang chạy polling Telegram...")
+    print("🚀 Bot đang chạy polling Telegram...")
     app_telegram.run_polling()
