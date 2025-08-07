@@ -24,11 +24,23 @@ def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
 # =================== GOOGLE SHEET =========================
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json = json.loads(os.getenv("GOOGLE_CREDS_JSON"))
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
-client = gspread.authorize(creds)
-sheet = client.open(SPREADSHEET_NAME).sheet1
+creds_json = os.getenv("GOOGLE_CREDS_JSON")
+if not creds_json:
+    raise ValueError("❌ GOOGLE_CREDS_JSON chưa được thiết lập hoặc rỗng!")
+
+try:
+    creds_dict = json.loads(creds_json)
+except json.JSONDecodeError as e:
+    raise ValueError(f"JSON sai cú pháp: {e}")
+
+try:
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
+    sheet = client.open(SPREADSHEET_NAME).sheet1
+    print("✅ Kết nối Google Sheet thành công!")
+except Exception as e:
+    raise ValueError(f"Không kết nối được Google Sheet: {e}")
+
 
 # ======================== MENU ============================
 MENU = [
