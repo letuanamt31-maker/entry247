@@ -1,4 +1,10 @@
 import os
+if os.environ.get("RENDER") and os.environ.get("RENDER_EXTERNAL_URL"):
+    print("✅ Đang chạy trên Render")
+else:
+    print("⚠️ Không phải môi trường Render, dừng polling tránh xung đột")
+    exit()
+import os
 import json
 import threading
 import logging
