@@ -1,3 +1,5 @@
+# entry247_bot.py (hoàn chỉnh với opt-in, broadcast, thống kê)
+
 import os
 import base64
 import threading
@@ -21,6 +23,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "5128195334"))
 
 # ==================== Logging ============================
 logging.basicConfig(level=logging.INFO)
@@ -79,11 +82,20 @@ def track_user_message(user_id, message_id):
         user_sent_messages[user_id] = []
     user_sent_messages[user_id].append(message_id)
 
+def update_user_optin(user_id, enabled: bool):
+    users = sheet_users.get_all_records()
+    for idx, row in enumerate(users, start=2):
+        if str(row["ID"]) == str(user_id):
+            sheet_users.update_cell(idx, 5, "✅" if enabled else "❌")
+            break
+
 def build_main_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(text, callback_data=f"menu_{i}")]
-        for i, (text, _) in enumerate(MENU)
+    keyboard = [[InlineKeyboardButton(text, callback_data=f"menu_{i}")] for i, (text, _) in enumerate(MENU)]
+    keyboard.append([
+        InlineKeyboardButton("🔔 Bật nhận thông báo khi thị trường đảo chiều", callback_data="optin"),
+        InlineKeyboardButton("🔕 Tắt nhận thông báo khi thị trường đảo chiều", callback_data="optout")
     ])
+    return InlineKeyboardMarkup(keyboard)
 
 def build_sub_keyboard(index):
     items = []
@@ -158,53 +170,56 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
 
-    elif data == "guide_data":
-        msg = await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung.")
-        track_user_message(user_id, msg.message_id)
+    elif data == "optin":
+        update_user_optin(user_id, True)
+        await query.edit_message_text("✅ Bạn đã đăng ký nhận thông báo.", reply_markup=build_main_keyboard())
 
-    elif data == "guide_bcoin":
-        if VIDEO_FILE_ID:
-            msg = await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn nhóm BCoin")
-            track_user_message(user_id, msg.message_id)
-        else:
-            msg = await query.message.reply_text("⚠️ VIDEO_FILE_ID chưa được cấu hình.")
-            track_user_message(user_id, msg.message_id)
+    elif data == "optout":
+        update_user_optin(user_id, False)
+        await query.edit_message_text("❌ Bạn đã tắt nhận thông báo.", reply_markup=build_main_keyboard())
 
-    elif data == "info_group_3":
-        msg = await query.message.reply_text("📺 Premium Signals sẽ được bổ sung.")
-        track_user_message(user_id, msg.message_id)
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return await update.message.reply_text("⛔ Bạn không có quyền dùng lệnh này.")
 
-    elif data == "info_group_4":
-        msg = await query.message.reply_text("📺 Trader Talk sẽ được bổ sung.")
-        track_user_message(user_id, msg.message_id)
+    message_text = update.message.text_html or ""
+    reply = update.message.reply_to_message
+    users = sheet_users.get_all_records()
+    count = 0
 
-    elif data == "info_group_5":
-        msg = await query.message.reply_text("📺 Nhóm Altcoin Signals sẽ mở miễn phí cho Premium.")
-        track_user_message(user_id, msg.message_id)
+    for user in users:
+        if user.get("Đăng ký nhận tin") == "✅":
+            try:
+                chat_id = int(user["ID"])
+                if reply and reply.video:
+                    await context.bot.send_video(chat_id=chat_id, video=reply.video.file_id, caption=message_text)
+                elif reply and reply.photo:
+                    await context.bot.send_photo(chat_id=chat_id, photo=reply.photo[-1].file_id, caption=message_text)
+                else:
+                    await context.bot.send_message(chat_id=chat_id, text=message_text)
+                count += 1
+            except Exception as e:
+                logger.warning(f"❌ Không gửi được đến {user['ID']}: {e}")
+    await update.message.reply_text(f"✅ Đã gửi đến {count} người dùng.")
 
-    elif data == "video_start_right":
-        msg = await query.message.reply_text("▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung.")
-        track_user_message(user_id, msg.message_id)
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    users = sheet_users.get_all_records()
+    total = len(users)
+    yes = sum(1 for u in users if u.get("Đăng ký nhận tin") == "✅")
+    no = total - yes
+    await update.message.reply_text(f"📊 Thống kê:\n- Tổng người dùng: {total}\n- Đang nhận thông báo: {yes}\n- Đã tắt: {no}")
 
-    elif data == "video_avoid":
-        msg = await query.message.reply_text("❗ Video 'Biết để tránh' sẽ được bổ sung.")
-        track_user_message(user_id, msg.message_id)
-
-async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.video:
-        file_id = update.message.video.file_id
-        msg = await update.message.reply_text(f"🎥 File ID của video là:\n\n`{file_id}`", parse_mode="Markdown")
-        track_user_message(update.effective_user.id, msg.message_id)
-
-# ==================== Start =====================
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
     app_telegram.add_handler(CommandHandler("start", start))
+    app_telegram.add_handler(CommandHandler("broadcast", broadcast))
+    app_telegram.add_handler(CommandHandler("stats", stats))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
-    app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
 
     logger.info("🚀 Bot Telegram đang chạy polling...")
     app_telegram.run_polling()
