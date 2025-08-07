@@ -2,7 +2,7 @@ import os
 import json
 import threading
 import logging
-from flask import Flask
+from flask import Flask, request, abort  # ✅ Đã thêm dòng này
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # ==================== Google Sheets ============================
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-sheet = None  # fallback in case of failure
+sheet = None
 
 try:
     if not GOOGLE_CREDS_JSON:
@@ -55,7 +55,20 @@ app_flask = Flask(__name__)
 
 @app_flask.route("/")
 def index():
-    return f"✅ Entry247 bot đang chạy! Token: {SECRET_TOKEN}"
+    return "✅ Entry247 bot đang chạy!"
+
+@app_flask.route("/admin/status")
+def admin_status():
+    token = request.args.get("token")
+    if token != SECRET_TOKEN:
+        abort(403)
+
+    sheet_status = "✅ Google Sheets OK" if sheet else "❌ Không kết nối Google Sheets"
+    return f"""
+    ✅ Bot hoạt động<br>
+    {sheet_status}<br>
+    🔐 Admin xác thực OK
+    """
 
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
@@ -124,10 +137,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
         except:
             pass
-        await context.bot.send_message(chat_id=chat_id, text="Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto dành riêng cho những trader nghiêm túc ✅
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
-📌 Mọi thông tin góp ý: @Entry247", reply_markup=build_main_keyboard())
+        await context.bot.send_message(chat_id=chat_id, text="Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto dành riêng cho những trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin góp ý: @Entry247", reply_markup=build_main_keyboard())
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
