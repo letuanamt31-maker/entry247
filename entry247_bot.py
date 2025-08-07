@@ -124,7 +124,10 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
         except:
             pass
-        await context.bot.send_message(chat_id=chat_id, text="🌟 Menu chính", reply_markup=build_main_keyboard())
+        await context.bot.send_message(chat_id=chat_id, text="Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto dành riêng cho những trader nghiêm túc ✅
+
+🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢
+📌 Mọi thông tin góp ý: @Entry247", reply_markup=build_main_keyboard())
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
