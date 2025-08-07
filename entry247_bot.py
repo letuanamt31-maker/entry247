@@ -136,34 +136,45 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
+    chat_id = query.message.chat_id
+    message_id = query.message.message_id
     data = query.data
+    user_id = query.from_user.id
+    first_name = query.from_user.first_name or "bạn"
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if data == "optin":
-        update_user_optin(user_id, True)
-        await query.edit_message_text("✅ Cảnh báo đảo chiều : ON.", reply_markup=build_main_keyboard())
-    elif data == "optout":
-        update_user_optin(user_id, False)
-        await query.edit_message_text("❌ Cảnh báo đảo chiều : OFF.", reply_markup=build_main_keyboard())
+    if data == "main_menu":
+        if user_id in user_sent_messages:
+            for mid in user_sent_messages[user_id]:
+                try:
+                    await context.bot.delete_message(chat_id=chat_id, message_id=mid)
+                except:
+                    pass
+            user_sent_messages[user_id] = []
+
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+        except:
+            pass
+
+        welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin góp ý: @Entry247"""
+        msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
+        track_user_message(user_id, msg.message_id)
+        sheet_logs.append_row([now, user_id, "Trở lại menu"])
+
     elif data.startswith("menu_"):
         index = int(data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
-    elif data.startswith("video_"):
-        index = int(data.split("_")[1])
-        caption = MENU[index][2]
-        video_id = VIDEO_IDS.get(index)
-        if video_id:
-            await context.bot.send_video(chat_id=query.message.chat_id, video=video_id, caption=caption)
-        else:
-            await context.bot.send_message(chat_id=query.message.chat_id, text="⚠️ Video chưa được cấu hình.")
-    elif data == "video_start_right":
-        await context.bot.send_message(chat_id=query.message.chat_id, text="▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung.")
-    elif data == "video_avoid":
-        await context.bot.send_message(chat_id=query.message.chat_id, text="❗ Video 'Biết để tránh' sẽ được bổ sung.")
-    elif data == "main_menu":
-        await query.edit_message_text("🔙 Trở lại menu chính", reply_markup=build_main_keyboard())
+
+    elif data == "optin":
+        update_user_optin(user_id, True)
+        await query.edit_message_text("✅ Nhận thông báo đào chiều sớm : ON.", reply_markup=build_main_keyboard())
+
+    elif data == "optout":
+        update_user_optin(user_id, False)
+        await query.edit_message_text("❌ Nhận thông báo đào chiều sớm : OFF.", reply_markup=build_main_keyboard())
+
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
