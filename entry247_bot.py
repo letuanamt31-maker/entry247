@@ -31,7 +31,7 @@ try:
     if not GOOGLE_CREDS_B64:
         raise ValueError("GOOGLE_CREDS_B64 không tồn tại hoặc rỗng.")
 
-    creds_bytes = base64.b64decode(GOOGLE_CREDS_B64.encode("utf-8"))
+    creds_bytes = base64.b64decode(GOOGLE_CREDS_B64)
     creds_path = Path("service_account.json")
     creds_path.write_bytes(creds_bytes)
     logger.info("✅ Đã giải mã service_account.json")
