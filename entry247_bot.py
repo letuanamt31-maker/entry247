@@ -21,7 +21,8 @@ def index():
     return "✅ Bot is running on Render!"
 
 def run_flask():
-    app_flask.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host="0.0.0.0", port=port)
 
 # =================== GOOGLE SHEET =========================
 creds_json = os.getenv("GOOGLE_CREDS_JSON")
