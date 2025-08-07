@@ -82,8 +82,18 @@ application.add_handler(CommandHandler("help", help_command))
 
 # --- Chạy polling khi chạy bằng Python (Render) ---
 if __name__ == "__main__":
+    import threading
+
+    def start_polling():
+        if BOT_TOKEN:
+            logging.info("🚀 Đang khởi động polling bot...")
+            application.run_polling(allowed_updates=Update.ALL_TYPES)
+        else:
+            logging.error("❌ BOT_TOKEN chưa được cấu hình")
+
     if IS_RENDER:
-        logging.info("🚀 Khởi động bot Telegram (Render)...")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-    else:
-        logging.info("⛔ Không khởi động polling ngoài môi trường Render.")
+        threading.Thread(target=start_polling).start()
+
+    # Khởi chạy Flask app
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host="0.0.0.0", port=port)
