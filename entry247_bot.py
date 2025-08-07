@@ -1,10 +1,12 @@
 from pathlib import Path
 
-entry247_bot_code = """
+# Nội dung file entry247_bot.py phiên bản cuối cùng
+final_code = '''\
 import os
 import json
 import threading
-from flask import Flask, request, abort
+from datetime import datetime
+from flask import Flask
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -13,7 +15,6 @@ from telegram.ext import (
 )
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 
 # ======================= Load .env =============================
 load_dotenv()
@@ -22,14 +23,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
-SECRET_TOKEN = os.getenv("SECRET_TOKEN")
 
 # ==================== Google Sheets ============================
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
-sheet = None
-worksheet_users = None
-worksheet_logs = None
 
 try:
     if not GOOGLE_CREDS_JSON:
@@ -42,21 +38,8 @@ try:
     if not SPREADSHEET_ID:
         raise ValueError("SPREADSHEET_ID không được thiết lập trong .env")
 
-    sheet = gc.open_by_key(SPREADSHEET_ID)
-
-    # Ensure worksheets
-    try:
-        worksheet_users = sheet.worksheet("Users")
-    except:
-        worksheet_users = sheet.add_worksheet(title="Users", rows="1000", cols="5")
-        worksheet_users.append_row(["ID", "Name", "Username", "First seen", "Last active"])
-
-    try:
-        worksheet_logs = sheet.worksheet("Logs")
-    except:
-        worksheet_logs = sheet.add_worksheet(title="Logs", rows="1000", cols="6")
-        worksheet_logs.append_row(["Timestamp", "User ID", "Username", "Name", "Action", "Message"])
-
+    sheet_users = gc.open_by_key(SPREADSHEET_ID).worksheet("Users")
+    sheet_logs = gc.open_by_key(SPREADSHEET_ID).worksheet("Logs")
     print("✅ Đã kết nối Google Sheet")
 except Exception as e:
     raise Exception(f"❌ Lỗi kết nối Google Sheet: {e}")
@@ -67,19 +50,6 @@ app_flask = Flask(__name__)
 @app_flask.route("/")
 def index():
     return "✅ Entry247 bot đang chạy!"
-
-@app_flask.route("/admin/status")
-def admin_status():
-    token = request.args.get("token")
-    if token != SECRET_TOKEN:
-        abort(403)
-
-    sheet_status = "✅ Google Sheets OK" if sheet else "❌ Không kết nối Google Sheets"
-    return f"""
-    ✅ Bot hoạt động<br>
-    {sheet_status}<br>
-    🔐 Admin xác thực OK
-    """
 
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
@@ -124,25 +94,19 @@ def build_sub_keyboard(index):
     items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")])
     return InlineKeyboardMarkup(items)
 
-def log_user(update: Update, action: str, message: str = ""):
-    if not worksheet_users or not worksheet_logs:
-        return
+def log_user_action(user_id, name, action):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sheet_logs.append_row([timestamp, str(user_id), name, action])
 
-    user = update.effective_user
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    all_ids = [str(row[0]) for row in worksheet_users.get_all_values()[1:]]
-    if str(user.id) not in all_ids:
-        worksheet_users.append_row([str(user.id), user.full_name, user.username or "", now, now])
-    else:
-        cell = worksheet_users.find(str(user.id))
-        worksheet_users.update_cell(cell.row, 5, now)  # Last active
-
-    worksheet_logs.append_row([now, str(user.id), user.username or "", user.full_name, action, message or ""])
+    existing_ids = sheet_users.col_values(1)
+    if str(user_id) not in existing_ids:
+        sheet_users.append_row([str(user_id), name])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_firstname = update.effective_user.first_name or "bạn"
-    welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
+    user = update.effective_user
+    log_user_action(user.id, user.first_name, "/start")
+
+    welcome_text = f"""🌟 Xin chào {user.first_name or "bạn"} 🚀
 
 Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto dành riêng cho những trader nghiêm túc ✅
 
@@ -150,41 +114,42 @@ Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệ
 📌 Mọi thông tin góp ý: @Entry247
 """
     await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
-    log_user(update, "start")
 
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
     message_id = query.message.message_id
+    data = query.data
+    user = query.from_user
 
-    log_user(update, f"button:{query.data}")
+    log_user_action(user.id, user.first_name, f"click: {data}")
 
-    if query.data == "main_menu":
+    if data == "main_menu":
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
         except:
             pass
         await context.bot.send_message(chat_id=chat_id, text="🌟 Menu chính", reply_markup=build_main_keyboard())
-    elif query.data.startswith("menu_"):
-        index = int(query.data.split("_")[1])
+    elif data.startswith("menu_"):
+        index = int(data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
-    elif query.data == "guide_data":
+    elif data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung.")
-    elif query.data == "guide_bcoin":
+    elif data == "guide_bcoin":
         if VIDEO_FILE_ID:
             await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn nhóm BCoin")
         else:
             await query.message.reply_text("⚠️ VIDEO_FILE_ID chưa được cấu hình.")
-    elif query.data == "info_group_3":
+    elif data == "info_group_3":
         await query.message.reply_text("📺 Premium Signals sẽ được bổ sung.")
-    elif query.data == "info_group_4":
+    elif data == "info_group_4":
         await query.message.reply_text("📺 Trader Talk sẽ được bổ sung.")
-    elif query.data == "info_group_5":
+    elif data == "info_group_5":
         await query.message.reply_text("📺 Nhóm Altcoin Signals sẽ mở miễn phí cho Premium.")
-    elif query.data == "video_start_right":
+    elif data == "video_start_right":
         await query.message.reply_text("▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung.")
-    elif query.data == "video_avoid":
+    elif data == "video_avoid":
         await query.message.reply_text("❗ Video 'Biết để tránh' sẽ được bổ sung.")
 
 async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -203,8 +168,11 @@ if __name__ == "__main__":
     app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
     print("🚀 Bot đang chạy polling Telegram...")
     app_telegram.run_polling()
-"""
+'''
 
-path = Path("/mnt/data/entry247_bot.py")
-path.write_text(entry247_bot_code.strip(), encoding="utf-8")
-path.name
+# Ghi ra file .py
+file_path = Path("/mnt/data/entry247_bot.py")
+file_path.write_text(final_code)
+
+file_path
+
