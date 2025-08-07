@@ -1,7 +1,3 @@
-from pathlib import Path
-
-# Nội dung file entry247_bot.py phiên bản cuối cùng
-final_code = '''\
 import os
 import json
 import threading
@@ -15,6 +11,7 @@ from telegram.ext import (
 )
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from pathlib import Path
 
 # ======================= Load .env =============================
 load_dotenv()
@@ -38,8 +35,9 @@ try:
     if not SPREADSHEET_ID:
         raise ValueError("SPREADSHEET_ID không được thiết lập trong .env")
 
-    sheet_users = gc.open_by_key(SPREADSHEET_ID).worksheet("Users")
-    sheet_logs = gc.open_by_key(SPREADSHEET_ID).worksheet("Logs")
+    spreadsheet = gc.open_by_key(SPREADSHEET_ID)
+    users_sheet = spreadsheet.worksheet("Users")
+    logs_sheet = spreadsheet.worksheet("Logs")
     print("✅ Đã kết nối Google Sheet")
 except Exception as e:
     raise Exception(f"❌ Lỗi kết nối Google Sheet: {e}")
@@ -94,17 +92,37 @@ def build_sub_keyboard(index):
     items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")])
     return InlineKeyboardMarkup(items)
 
-def log_user_action(user_id, name, action):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    sheet_logs.append_row([timestamp, str(user_id), name, action])
+def log_user_to_sheet(user, action="start"):
+    try:
+        all_users = users_sheet.get_all_records()
+        existing_ids = [str(u["ID"]) for u in all_users]
+        user_id = str(user.id)
 
-    existing_ids = sheet_users.col_values(1)
-    if str(user_id) not in existing_ids:
-        sheet_users.append_row([str(user_id), name])
+        # Ghi vào Users nếu chưa có
+        if user_id not in existing_ids:
+            users_sheet.append_row([
+                user_id,
+                user.first_name or "",
+                user.username or "",
+                user.language_code or "",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ])
+
+        # Ghi vào Logs
+        logs_sheet.append_row([
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            user_id,
+            user.first_name or "",
+            user.username or "",
+            action
+        ])
+
+    except Exception as e:
+        print(f"❌ Lỗi ghi Google Sheet: {e}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    log_user_action(user.id, user.first_name, "/start")
+    log_user_to_sheet(user, action="start")
 
     welcome_text = f"""🌟 Xin chào {user.first_name or "bạn"} 🚀
 
@@ -118,38 +136,37 @@ Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệ
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user = query.from_user
+    log_user_to_sheet(user, action=query.data)
+
     chat_id = query.message.chat_id
     message_id = query.message.message_id
-    data = query.data
-    user = query.from_user
 
-    log_user_action(user.id, user.first_name, f"click: {data}")
-
-    if data == "main_menu":
+    if query.data == "main_menu":
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
         except:
             pass
         await context.bot.send_message(chat_id=chat_id, text="🌟 Menu chính", reply_markup=build_main_keyboard())
-    elif data.startswith("menu_"):
-        index = int(data.split("_")[1])
+    elif query.data.startswith("menu_"):
+        index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
-    elif data == "guide_data":
+    elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung.")
-    elif data == "guide_bcoin":
+    elif query.data == "guide_bcoin":
         if VIDEO_FILE_ID:
             await context.bot.send_video(chat_id=chat_id, video=VIDEO_FILE_ID, caption="📺 Hướng dẫn nhóm BCoin")
         else:
             await query.message.reply_text("⚠️ VIDEO_FILE_ID chưa được cấu hình.")
-    elif data == "info_group_3":
+    elif query.data == "info_group_3":
         await query.message.reply_text("📺 Premium Signals sẽ được bổ sung.")
-    elif data == "info_group_4":
+    elif query.data == "info_group_4":
         await query.message.reply_text("📺 Trader Talk sẽ được bổ sung.")
-    elif data == "info_group_5":
+    elif query.data == "info_group_5":
         await query.message.reply_text("📺 Nhóm Altcoin Signals sẽ mở miễn phí cho Premium.")
-    elif data == "video_start_right":
+    elif query.data == "video_start_right":
         await query.message.reply_text("▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung.")
-    elif data == "video_avoid":
+    elif query.data == "video_avoid":
         await query.message.reply_text("❗ Video 'Biết để tránh' sẽ được bổ sung.")
 
 async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -157,22 +174,20 @@ async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_id = update.message.video.file_id
         await update.message.reply_text(f"🎥 File ID của video là:\n\n`{file_id}`", parse_mode="Markdown")
 
-# ==================== Start =====================
+# ==================== Khởi động =====================
 if __name__ == "__main__":
+    # Tạo thư mục nếu cần
+    Path("/mnt/data").mkdir(parents=True, exist_ok=True)
+
+    # Chạy Flask trong thread phụ
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
+    # Handlers
     app_telegram.add_handler(CommandHandler("start", start))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
     app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
+
     print("🚀 Bot đang chạy polling Telegram...")
     app_telegram.run_polling()
-'''
-
-# Ghi ra file .py
-file_path = Path("/mnt/data/entry247_bot.py")
-file_path.write_text(final_code)
-
-file_path
-
