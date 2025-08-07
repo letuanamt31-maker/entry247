@@ -92,8 +92,8 @@ def update_user_optin(user_id, enabled: bool):
 def build_main_keyboard():
     keyboard = [[InlineKeyboardButton(text, callback_data=f"menu_{i}")] for i, (text, _) in enumerate(MENU)]
     keyboard.append([
-        InlineKeyboardButton("🔔 Bật nhận thông báo khi thị trường đảo chiều", callback_data="optin"),
-        InlineKeyboardButton("🔕 Tắt nhận thông báo khi thị trường đảo chiều", callback_data="optout")
+        InlineKeyboardButton("🔔 Bật cảnh báo đảo chiều", callback_data="optin"),
+        InlineKeyboardButton("🔕 Tắt cảnh báo đảo chiều", callback_data="optout")
     ])
     return InlineKeyboardMarkup(keyboard)
 
@@ -172,11 +172,11 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "optin":
         update_user_optin(user_id, True)
-        await query.edit_message_text("✅ Bạn đã đăng ký nhận thông báo.", reply_markup=build_main_keyboard())
+        await query.edit_message_text("✅ Nhận thông báo đào chiều sớm : ON.", reply_markup=build_main_keyboard())
 
     elif data == "optout":
         update_user_optin(user_id, False)
-        await query.edit_message_text("❌ Bạn đã tắt nhận thông báo.", reply_markup=build_main_keyboard())
+        await query.edit_message_text("❌ Nhận thông báo đào chiều sớm : OFF.", reply_markup=build_main_keyboard())
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
