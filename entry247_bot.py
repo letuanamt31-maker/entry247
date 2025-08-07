@@ -1,8 +1,8 @@
 import os
 import json
 import threading
-from datetime import datetime
-from flask import Flask
+import logging
+from flask import Flask, request, abort
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -10,8 +10,7 @@ from telegram.ext import (
     MessageHandler, ContextTypes, filters
 )
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from pathlib import Path
+from google.oauth2.service_account import Credentials
 
 # ======================= Load .env =============================
 load_dotenv()
@@ -19,28 +18,37 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
+GOOGLE_CREDS_PATH = os.getenv("GOOGLE_CREDS_PATH")
+SECRET_TOKEN = os.getenv("SECRET", "entry247")
+
+# ==================== Logging setup ============================
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # ==================== Google Sheets ============================
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+scope = ["https://www.googleapis.com/auth/spreadsheets"]
+sheet = None
 
 try:
-    if not GOOGLE_CREDS_JSON:
-        raise ValueError("GOOGLE_CREDS_JSON không tồn tại hoặc rỗng.")
+    if not GOOGLE_CREDS_PATH or not os.path.exists(GOOGLE_CREDS_PATH):
+        raise FileNotFoundError("File service_account.json không tồn tại hoặc GOOGLE_CREDS_PATH không đúng.")
 
-    creds_dict = json.loads(GOOGLE_CREDS_JSON)
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-    gc = gspread.authorize(creds)
+    credentials = Credentials.from_service_account_file(
+        GOOGLE_CREDS_PATH,
+        scopes=scope
+    )
+    gc = gspread.authorize(credentials)
 
     if not SPREADSHEET_ID:
-        raise ValueError("SPREADSHEET_ID không được thiết lập trong .env")
+        raise ValueError("SPREADSHEET_ID không được thiết lập.")
 
-    spreadsheet = gc.open_by_key(SPREADSHEET_ID)
-    users_sheet = spreadsheet.worksheet("Users")
-    logs_sheet = spreadsheet.worksheet("Logs")
-    print("✅ Đã kết nối Google Sheet")
+    sheet = gc.open_by_key(SPREADSHEET_ID)
+    logger.info("✅ Đã kết nối Google Sheets")
 except Exception as e:
-    raise Exception(f"❌ Lỗi kết nối Google Sheet: {e}")
+    logger.error(f"❌ Lỗi kết nối Google Sheet: {e}")
 
 # ==================== Flask App ===============================
 app_flask = Flask(__name__)
@@ -48,6 +56,18 @@ app_flask = Flask(__name__)
 @app_flask.route("/")
 def index():
     return "✅ Entry247 bot đang chạy!"
+
+@app_flask.route("/admin/status")
+def admin_status():
+    token = request.args.get("token")
+    if token != SECRET_TOKEN:
+        abort(403)
+    sheet_status = "✅ Google Sheets OK" if sheet else "❌ Không kết nối Google Sheets"
+    return f"""
+    ✅ Bot hoạt động<br>
+    {sheet_status}<br>
+    🔐 Admin xác thực OK
+    """
 
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
@@ -92,39 +112,9 @@ def build_sub_keyboard(index):
     items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")])
     return InlineKeyboardMarkup(items)
 
-def log_user_to_sheet(user, action="start"):
-    try:
-        all_users = users_sheet.get_all_records()
-        existing_ids = [str(u["ID"]) for u in all_users]
-        user_id = str(user.id)
-
-        # Ghi vào Users nếu chưa có
-        if user_id not in existing_ids:
-            users_sheet.append_row([
-                user_id,
-                user.first_name or "",
-                user.username or "",
-                user.language_code or "",
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ])
-
-        # Ghi vào Logs
-        logs_sheet.append_row([
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            user_id,
-            user.first_name or "",
-            user.username or "",
-            action
-        ])
-
-    except Exception as e:
-        print(f"❌ Lỗi ghi Google Sheet: {e}")
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    log_user_to_sheet(user, action="start")
-
-    welcome_text = f"""🌟 Xin chào {user.first_name or "bạn"} 🚀
+    user_firstname = update.effective_user.first_name or "bạn"
+    welcome_text = f"""🌟 Xin chào {user_firstname} 🚀
 
 Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto dành riêng cho những trader nghiêm túc ✅
 
@@ -132,15 +122,14 @@ Chào mừng bạn tìm hiểu Entry247 Premium – nơi tổng hợp dữ liệ
 📌 Mọi thông tin góp ý: @Entry247
 """
     await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
+    await log_user_to_sheets(update.effective_user, "start")
 
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user = query.from_user
-    log_user_to_sheet(user, action=query.data)
-
     chat_id = query.message.chat_id
     message_id = query.message.message_id
+    user = update.effective_user
 
     if query.data == "main_menu":
         try:
@@ -151,6 +140,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
+        await log_user_to_sheets(user, MENU[index][0])
     elif query.data == "guide_data":
         await query.message.reply_text("📺 Hướng dẫn đọc số liệu sẽ được bổ sung.")
     elif query.data == "guide_bcoin":
@@ -174,20 +164,41 @@ async def save_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_id = update.message.video.file_id
         await update.message.reply_text(f"🎥 File ID của video là:\n\n`{file_id}`", parse_mode="Markdown")
 
-# ==================== Khởi động =====================
-if __name__ == "__main__":
-    # Tạo thư mục nếu cần
-    Path("/mnt/data").mkdir(parents=True, exist_ok=True)
+async def log_user_to_sheets(user, action):
+    if sheet is None:
+        return
+    try:
+        users_ws = sheet.worksheet("Users")
+        logs_ws = sheet.worksheet("Logs")
 
-    # Chạy Flask trong thread phụ
+        users = users_ws.get_all_records()
+        user_ids = [str(u['ID']) for u in users]
+
+        if str(user.id) not in user_ids:
+            users_ws.append_row([
+                str(user.id),
+                user.username or "",
+                user.full_name or ""
+            ])
+        logs_ws.append_row([
+            str(user.id),
+            user.username or "",
+            user.full_name or "",
+            action
+        ])
+        logger.info(f"📌 Log: {user.id} - {action}")
+    except Exception as e:
+        logger.warning(f"❗ Không thể ghi log vào Google Sheets: {e}")
+
+# ==================== Start =====================
+if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    # Handlers
     app_telegram.add_handler(CommandHandler("start", start))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
     app_telegram.add_handler(MessageHandler(filters.VIDEO, save_file_id))
 
-    print("🚀 Bot đang chạy polling Telegram...")
+    logger.info("🚀 Bot đang chạy polling Telegram...")
     app_telegram.run_polling()
