@@ -8,3 +8,8 @@ services:
     envVars:
       - key: PORT
         value: 10000
+      - key: GOOGLE_CREDS_JSON
+        value: |
+          {"type":"service_account", ...}  # Chuỗi JSON đầy đủ như bạn gửi
+      - key: SPREADSHEET_ID
+        value: 1fpBfphrqJEZYgV-2BZ_a9vHTxlXWLBe1feZJd_M7dlQ
