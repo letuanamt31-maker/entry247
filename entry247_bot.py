@@ -134,11 +134,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "main_menu":
         await context.bot.delete_message(chat_id, message_id)
-        await context.bot.send_message(chat_id, "🌟 Xin chào {user.first_name} 🚀
-
-Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢", reply_markup=build_main_keyboard())
+        await context.bot.send_message(chat_id, "🌟 Menu chính", reply_markup=build_main_keyboard())
     elif query.data.startswith("menu_"):
         index = int(query.data.split("_")[1])
         await query.edit_message_text(f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
