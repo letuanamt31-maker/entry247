@@ -15,7 +15,7 @@ from telegram.ext import (
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Load .env file
+# Load environment variables
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -89,7 +89,7 @@ def build_sub_keyboard(index):
         ])
     elif index == 4:
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("📢 Entry247 đang hoàn thiện", callback_data="info_group_5")],
+            [InlineKeyboardButton("Entr247 đang hoàn thiện", callback_data="info_group_5")],
             [InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")]
         ])
     elif index == 5:
@@ -142,7 +142,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "info_group_4":
         await query.message.reply_text("📺 Tìm hiểu nhóm Trader Talk sẽ được bổ sung sau.")
     elif query.data == "info_group_5":
-        await query.message.reply_text("📢 Altcoin Signals sẽ public Free 100% trong Premium.")
+        await query.message.reply_text("📺 Altcoin Signals sẽ public Free 100% trong Premium.")
     elif query.data == "video_start_right":
         await query.message.reply_text("▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung sau.")
     elif query.data == "video_avoid":
