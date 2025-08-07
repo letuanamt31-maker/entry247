@@ -25,6 +25,16 @@ SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
 ADMIN_IDS = ["5128195334"]  # ID admin được phép dùng /broadcast
 
+# Mỗi nút có video riêng
+VIDEO_IDS = {
+    0: os.getenv("VIDEO_ID_0"),
+    1: os.getenv("VIDEO_ID_1"),
+    2: os.getenv("VIDEO_ID_2"),
+    3: os.getenv("VIDEO_ID_3"),
+    4: os.getenv("VIDEO_ID_4"),
+    5: os.getenv("VIDEO_ID_5")
+}
+
 # ==================== Logging ============================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -143,7 +153,11 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("video_"):
         index = int(data.split("_")[1])
         caption = MENU[index][2]
-        await context.bot.send_message(chat_id=query.message.chat_id, text=caption or "📺 Video đang được cập nhật.")
+        video_id = VIDEO_IDS.get(index)
+        if video_id:
+            await context.bot.send_video(chat_id=query.message.chat_id, video=video_id, caption=caption)
+        else:
+            await context.bot.send_message(chat_id=query.message.chat_id, text="⚠️ Video chưa được cấu hình.")
     elif data == "video_start_right":
         await context.bot.send_message(chat_id=query.message.chat_id, text="▶️ Video 'Đi đúng từ đầu' sẽ được bổ sung.")
     elif data == "video_avoid":
