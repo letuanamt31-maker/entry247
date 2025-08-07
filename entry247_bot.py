@@ -10,7 +10,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ======================= CONFIG ===========================
 BOT_TOKEN = '7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4'
 VIDEO_FILE_ID = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"
-SPREADSHEET_NAME = "Entry247_Users"
+SPREADSHEET_NAME = "entry247_Users"
 
 # ===================== FLASK SETUP ========================
 app_flask = Flask(__name__)
