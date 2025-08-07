@@ -60,11 +60,11 @@ def run_flask():
 app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
 MENU = [
-    ("Kênh dữ liệu Update 24/24", "https://docs.google.com/...", "📺 Hướng dẫn đọc số liệu"),
+    ("Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=1941100397#gid=1941100397", "📺 Hướng dẫn đọc số liệu"),
     ("BCoin_Push", "https://t.me/Entry247_Push", "📺 Hướng dẫn nhóm BCoin"),
-    ("Premium Signals 🇻🇳", "https://t.me/+...", "📺 Premium Signals là gì?"),
-    ("Premium Trader Talk 🇻🇳", "https://t.me/+...", "📺 Tìm hiểu nhóm Trader"),
-    ("Altcoin Season Signals 🇻🇳", "https://t.me/+...", "📺 Thông tin nhóm Altcoin"),
+    ("Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1", "📺 Premium Signals giúp gì ?"),
+    ("Premium Trader Talk 🇻🇳", "https://t.me/+X6ibaOa_ETVhNTY1", "📺 Tìm hiểu nhóm Trader"),
+    ("Altcoin Season Signals 🇻🇳", "https://t.me/+_T-rtdJDveRjMWRl", "📺 Thông tin nhóm Altcoin"),
     ("Học và Hiểu (Video)", None, None),
 ]
 
