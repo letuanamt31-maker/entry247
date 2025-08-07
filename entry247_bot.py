@@ -10,7 +10,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ======================= CONFIG ===========================
 BOT_TOKEN = '7876918917:AAE8J2TT4fc-iZB18dnA_tAoUyrHwg_v6q4'
 VIDEO_FILE_ID = "BAACAgUAAxkBAAIBTWiTE_-7a-BlcLtoiOaR1j5vjNHNAAKZFgACyjqYVIZs7rD0n2xMNgQ"
-SPREADSHEET_NAME = "entry247_Users"
+GOOGLE_SHEET_ID = "1fpBfphrqJEZYgV-2BZ_a9vHTxlXWLBe1feZJd_M7dlQ"
 
 # ===================== FLASK SETUP ========================
 app_flask = Flask(__name__)
@@ -34,13 +34,13 @@ except json.JSONDecodeError as e:
     raise ValueError(f"JSON sai cú pháp: {e}")
 
 try:
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
-    sheet = client.open(SPREADSHEET_NAME).sheet1
+    sheet = client.open_by_key(GOOGLE_SHEET_ID).sheet1
     print("✅ Kết nối Google Sheet thành công!")
 except Exception as e:
     raise ValueError(f"Không kết nối được Google Sheet: {e}")
-
 
 # ======================== MENU ============================
 MENU = [
@@ -81,8 +81,9 @@ def save_user(user):
         existing = sheet.col_values(1)
         if user_id not in existing:
             sheet.append_row([user_id, user.first_name or "", user.username or ""])
+            print(f"✅ Ghi user {user_id} vào Google Sheet")
     except Exception as e:
-        print(f"Error saving user: {e}")
+        print(f"❌ Lỗi khi ghi user vào sheet: {e}")
 
 # ================= XOÁ TIN NHẮN CŨ ========================
 async def delete_old_messages(chat_id, context):
