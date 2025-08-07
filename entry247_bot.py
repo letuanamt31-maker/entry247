@@ -175,6 +175,14 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update_user_optin(user_id, False)
         await query.edit_message_text("❌ Nhận thông báo đào chiều sớm : OFF.", reply_markup=build_main_keyboard())
 
+    elif data.startswith("video_"):
+        index = int(data.split("_")[1])
+        caption = MENU[index][2]
+        video_id = VIDEO_IDS.get(index)
+        if video_id:
+            await context.bot.send_video(chat_id=chat_id, video=video_id, caption=caption)
+        else:
+            await context.bot.send_message(chat_id=chat_id, text="⚠️ Video chưa được cấu hình.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
