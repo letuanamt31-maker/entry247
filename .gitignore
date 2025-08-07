@@ -1,5 +1,2 @@
-# Không commit file cấu hình thật hoặc key nhạy cảm
 .env
 creds.json
-*.pyc
-__pycache__/
