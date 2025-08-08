@@ -129,8 +129,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     sheet_logs.append_row([now, user_id, "/start"])
 
-    welcome_text = f"""🔸 Menu chính
-🌟 Xin chào {first_name} 🚀
+    welcome_text = f"""🌟 Xin chào {first_name} 🚀
 
 Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
 
@@ -139,26 +138,7 @@ Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ li�
     msg = await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
     track_user_message(user_id, msg.message_id)
 
-async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    chat_id = query.message.chat_id
-    message_id = query.message.message_id
-    data = query.data
-    user_id = query.from_user.id
-    first_name = query.from_user.first_name or "bạn"
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    if data == "main_menu":
-        welcome_text = f"""🔸 Menu chính
-🌟 Xin chào {first_name} 🚀
-
-Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính
-📌 Góp ý: @Entry247"""
-        msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
-        new_menu_msg_id = msg.message_id
+# (Giữ nguyên các phần còn lại của code như trước)
 
         if user_id in user_sent_messages:
             for mid in user_sent_messages[user_id]:
