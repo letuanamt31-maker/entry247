@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from flask import Flask
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters
@@ -23,9 +23,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
-ADMIN_IDS = ["5128195334"]  # ID admin được phép dùng /broadcast
+ADMIN_IDS = ["5128195334"]
 
-# Mỗi nút có video riêng
 VIDEO_IDS = {
     0: os.getenv("VIDEO_ID_0"),
     1: os.getenv("VIDEO_ID_1"),
@@ -83,6 +82,15 @@ user_sent_messages = {}
 def track_user_message(user_id, message_id):
     user_sent_messages.setdefault(user_id, []).append(message_id)
 
+def clear_old_messages(context, chat_id, user_id):
+    if user_id in user_sent_messages:
+        for mid in user_sent_messages[user_id]:
+            try:
+                context.bot.delete_message(chat_id=chat_id, message_id=mid)
+            except:
+                pass
+        user_sent_messages[user_id] = []
+
 def build_main_keyboard():
     keyboard = [[InlineKeyboardButton(text, callback_data=f"menu_{i}")] for i, (text, _, _) in enumerate(MENU)]
     keyboard.append([
@@ -129,62 +137,54 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     sheet_logs.append_row([now, user_id, "/start"])
 
-    welcome_text = f"""🌟 Xin chào {first_name} 🚀
-
-Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính
-📌 Góp ý: @Entry247"""
+    welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
     msg = await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
     track_user_message(user_id, msg.message_id)
 
-# (Giữ nguyên các phần còn lại của code như trước)
+async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    chat_id = query.message.chat_id
+    message_id = query.message.message_id
+    data = query.data
+    user_id = query.from_user.id
+    first_name = query.from_user.first_name or "bạn"
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if user_id in user_sent_messages:
-            for mid in user_sent_messages[user_id]:
-                if mid != new_menu_msg_id:
-                    try:
-                        await context.bot.delete_message(chat_id=chat_id, message_id=mid)
-                    except:
-                        pass
-            user_sent_messages[user_id] = [new_menu_msg_id]
-
-        sheet_logs.append_row([now, user_id, "Trở lại menu"])
+    if data == "main_menu":
+        msg = await context.bot.send_message(chat_id=chat_id, text=f"🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247", reply_markup=build_main_keyboard())
+        track_user_message(user_id, msg.message_id)
+        clear_old_messages(context, chat_id, user_id)
         return
-
-    if user_id in user_sent_messages:
-        for mid in user_sent_messages[user_id]:
-            try:
-                await context.bot.delete_message(chat_id=chat_id, message_id=mid)
-            except:
-                pass
-        user_sent_messages[user_id] = []
 
     if data.startswith("menu_"):
         index = int(data.split("_")[1])
         msg = await context.bot.send_message(chat_id=chat_id, text=f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
         track_user_message(user_id, msg.message_id)
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
+        return
 
-    elif data == "optin":
-        update_user_optin(user_id, True)
-        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Nhận thông báo đào chiều sớm : ON.", reply_markup=build_main_keyboard())
-        track_user_message(user_id, msg.message_id)
-
-    elif data == "optout":
-        update_user_optin(user_id, False)
-        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đào chiều sớm : OFF.", reply_markup=build_main_keyboard())
-        track_user_message(user_id, msg.message_id)
-
-    elif data.startswith("video_"):
+    if data.startswith("video_"):
         index = int(data.split("_")[1])
-        caption = MENU[index][2] or "Danh mục đang được hoàn thiện, sẽ sớm update tới các bạn 🔥"
         video_id = VIDEO_IDS.get(index)
         if video_id:
-            msg = await context.bot.send_video(chat_id=chat_id, video=video_id, caption=caption)
+            msg = await context.bot.send_video(chat_id=chat_id, video=video_id, caption=MENU[index][2])
         else:
-            msg = await context.bot.send_message(chat_id=chat_id, text="⚠️ Video chưa được cấu hình.")
+            msg = await context.bot.send_message(chat_id=chat_id, text="Danh mục đang được hoàn thiện, sẽ sớm update tới các bạn 🔥")
         track_user_message(user_id, msg.message_id)
+        return
+
+    if data == "optin":
+        update_user_optin(user_id, True)
+        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Đã bật cảnh báo đảo chiều.", reply_markup=build_main_keyboard())
+        track_user_message(user_id, msg.message_id)
+        return
+
+    if data == "optout":
+        update_user_optin(user_id, False)
+        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Đã tắt cảnh báo đảo chiều.", reply_markup=build_main_keyboard())
+        track_user_message(user_id, msg.message_id)
+        return
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
