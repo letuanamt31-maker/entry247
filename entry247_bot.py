@@ -1,3 +1,6 @@
+# REQUIREMENTS
+# pip install python-telegram-bot==20.3 flask gspread google-auth
+
 import os
 import base64
 import threading
@@ -5,7 +8,7 @@ import logging
 from pathlib import Path
 from flask import Flask
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaVideo
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     ContextTypes, filters
@@ -74,8 +77,8 @@ MENU = [
 ]
 
 user_sent_messages = {}
-user_last_menu = {}
 user_menu_stack = {}
+
 
 def track_user_message(user_id, message_id):
     user_sent_messages.setdefault(user_id, []).append(message_id)
@@ -114,6 +117,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
     first_name = user.first_name or "bạn"
+    user_menu_stack[user_id] = []
 
     welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
 
@@ -122,47 +126,112 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    chat_id = query.message.chat_id
-    message_id = query.message.message_id
-    data = query.data
     user_id = query.from_user.id
+    data = query.data
+    chat_id = query.message.chat_id
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    if user_id not in user_menu_stack:
+        user_menu_stack[user_id] = []
+
     if data == "main_menu":
-        welcome_text = f"""🌟 Xin chào {query.from_user.first_name or "bạn"} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
+        user_menu_stack[user_id] = []
         await query.edit_message_text(
-            text=welcome_text,
+            text=f"🌟 Xin chào {query.from_user.first_name or 'bạn'} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247",
             reply_markup=build_main_keyboard()
         )
         sheet_logs.append_row([now, user_id, "Trở lại menu"])
 
     elif data.startswith("menu_"):
         index = int(data.split("_")[1])
-        prev_index = user_last_menu.get(user_id)
-        if prev_index is not None:
-            user_menu_stack.setdefault(user_id, []).append(prev_index)
-        user_last_menu[user_id] = index
+        user_menu_stack[user_id].append(data)
         await query.edit_message_text(
             text=f"🔹 {MENU[index][0]}",
             reply_markup=build_sub_keyboard(index)
         )
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
 
-    elif data == "back":
-        if user_menu_stack.get(user_id):
-            back_index = user_menu_stack[user_id].pop()
-            user_last_menu[user_id] = back_index
-            await query.edit_message_text(
-                text=f"🔹 {MENU[back_index][0]}",
-                reply_markup=build_sub_keyboard(back_index)
+    elif data.startswith("video_"):
+        index = int(data.split("_")[1])
+        user_menu_stack[user_id].append(data)
+        video_id = VIDEO_IDS.get(index)
+        caption = MENU[index][2] or "🎬 Video đang phát"
+        if video_id:
+            await query.message.edit_media(
+                media=InputMediaVideo(media=video_id, caption=caption),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
+                ])
             )
-            sheet_logs.append_row([now, user_id, f"Trở lại: {MENU[back_index][0]}"])
         else:
-            welcome_text = f"""🌟 Xin chào {query.from_user.first_name or "bạn"} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
             await query.edit_message_text(
-                text=welcome_text,
+                text="⚠️ Video chưa được cấu hình.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
+                ])
+            )
+        sheet_logs.append_row([now, user_id, f"Xem video: {MENU[index][0]}"])
+
+    elif data == "video_start_right":
+        index = 5
+        user_menu_stack[user_id].append("video_start_right")
+        video_id = VIDEO_IDS.get(0)
+        if video_id:
+            await query.message.edit_media(
+                media=InputMediaVideo(media=video_id, caption="▶️ Đi đúng từ đầu"),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
+                ])
+            )
+            sheet_logs.append_row([now, user_id, "Xem video: Đi đúng từ đầu"])
+
+    elif data == "video_avoid":
+        index = 5
+        user_menu_stack[user_id].append("video_avoid")
+        video_id = VIDEO_IDS.get(1)
+        if video_id:
+            await query.message.edit_media(
+                media=InputMediaVideo(media=video_id, caption="❗ Biết để tránh"),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
+                ])
+            )
+            sheet_logs.append_row([now, user_id, "Xem video: Biết để tránh"])
+
+    elif data == "back":
+        if user_menu_stack[user_id]:
+            user_menu_stack[user_id].pop()
+        if user_menu_stack[user_id]:
+            prev = user_menu_stack[user_id][-1]
+            if prev.startswith("menu_"):
+                index = int(prev.split("_")[1])
+                try:
+                    await query.edit_message_text(
+                        text=f"🔹 {MENU[index][0]}",
+                        reply_markup=build_sub_keyboard(index)
+                    )
+                except:
+                    await query.message.delete()
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=f"🔹 {MENU[index][0]}",
+                        reply_markup=build_sub_keyboard(index)
+                    )
+                sheet_logs.append_row([now, user_id, f"Trở lại: {MENU[index][0]}"])
+                return
+        try:
+            await query.edit_message_text(
+                text=f"🌟 Xin chào {query.from_user.first_name or 'bạn'} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247",
                 reply_markup=build_main_keyboard()
             )
+        except:
+            await query.message.delete()
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"🌟 Xin chào {query.from_user.first_name or 'bạn'} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247",
+                reply_markup=build_main_keyboard()
+            )
+        sheet_logs.append_row([now, user_id, "Trở lại menu chính"])
 
     elif data == "optin":
         update_user_optin(user_id, True)
@@ -177,60 +246,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="❌ Nhận thông báo đảo chiều: OFF.",
             reply_markup=build_main_keyboard()
         )
-
-    elif data.startswith("video_"):
-        index = int(data.split("_")[1])
-        caption = MENU[index][2]
-        video_id = VIDEO_IDS.get(index)
-        if video_id:
-            msg = await context.bot.send_video(
-                chat_id=chat_id,
-                video=video_id,
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
-                ])
-            )
-        else:
-            msg = await context.bot.send_message(
-                chat_id=chat_id,
-                text="⚠️ Video chưa được cấu hình.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
-                ])
-            )
-        track_user_message(user_id, msg.message_id)
-        sheet_logs.append_row([now, user_id, f"Xem video: {MENU[index][0]}"])
-
-    elif data == "video_start_right":
-        caption = "▶️ Đi đúng từ đầu"
-        video_id = VIDEO_IDS.get(0)
-        if video_id:
-            msg = await context.bot.send_video(
-                chat_id=chat_id,
-                video=video_id,
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
-                ])
-            )
-            track_user_message(user_id, msg.message_id)
-            sheet_logs.append_row([now, user_id, "Xem video: Đi đúng từ đầu"])
-
-    elif data == "video_avoid":
-        caption = "❗ Biết để tránh"
-        video_id = VIDEO_IDS.get(1)
-        if video_id:
-            msg = await context.bot.send_video(
-                chat_id=chat_id,
-                video=video_id,
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
-                ])
-            )
-            track_user_message(user_id, msg.message_id)
-            sheet_logs.append_row([now, user_id, "Xem video: Biết để tránh"])
 
 # ======================= MAIN ========================
 if __name__ == "__main__":
