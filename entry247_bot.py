@@ -146,11 +146,11 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
         welcome_text = f"""🌟 Xin chào {query.from_user.first_name or "bạn"} 🚀
 
-Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
+          Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
 
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính
-📌 Góp ý: @Entry247"""
-msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
+          🟢 Bạn có quyền truy cập vào 6 tài nguyên chính
+          📌 Góp ý: @Entry247"""
+        msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
         sheet_logs.append_row([now, user_id, "Trở lại menu"])
 
