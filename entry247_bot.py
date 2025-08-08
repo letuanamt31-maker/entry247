@@ -1,7 +1,3 @@
-from pathlib import Path
-
-# Nội dung đầy đủ của file entry247_bot.py với cập nhật mới nhất
-code = '''\
 import os
 import base64
 import threading
@@ -12,7 +8,7 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    ContextTypes
+    ContextTypes, filters
 )
 import gspread
 from google.oauth2.service_account import Credentials
@@ -24,6 +20,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
 ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")
+
 VIDEO_IDS = {
     0: os.getenv("VIDEO_ID_0"),
     1: os.getenv("VIDEO_ID_1"),
@@ -56,9 +53,11 @@ except Exception as e:
 
 # ==================== Flask ===============================
 app_flask = Flask(__name__)
+
 @app_flask.route("/")
 def index():
     return "✅ Entry247 bot đang chạy!"
+
 def run_flask():
     app_flask.run(host="0.0.0.0", port=10000)
 
@@ -109,9 +108,6 @@ def update_user_optin(user_id, enabled):
             sheet_users.update_cell(idx, 5, "✅" if enabled else "❌")
             break
 
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(msg="Exception while handling an update:", exc_info=context.error)
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
@@ -122,14 +118,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = sheet_users.get_all_records()
     if not any(str(user_id) == str(u["ID"]) for u in users):
         sheet_users.append_row([user_id, first_name, username, now, "❌"])
+
     sheet_logs.append_row([now, user_id, "/start"])
 
-    welcome_text = f"""🌟 Xin chào {first_name} 🚀
-
-Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
-
-🟢 Bạn có quyền truy cập vào 6 tài nguyên chính
-📌 Góp ý: @Entry247"""
+    welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
     msg = await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
     track_user_message(user_id, msg.message_id)
 
@@ -140,22 +132,18 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = query.message.message_id
     data = query.data
     user_id = query.from_user.id
-    first_name = query.from_user.first_name or "bạn"
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Xoá toàn bộ các tin nhắn trước đó của user
-    for mid in user_sent_messages.get(user_id, []):
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=mid)
-        except:
-            pass
-    user_sent_messages[user_id] = []
+    if user_id in user_sent_messages:
+        for mid in user_sent_messages[user_id]:
+            try:
+                await context.bot.delete_message(chat_id=chat_id, message_id=mid)
+            except:
+                pass
+        user_sent_messages[user_id] = []
 
     if data == "main_menu":
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        except:
-            pass
+        await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
         msg = await context.bot.send_message(chat_id=chat_id, text="🌟 Trở lại menu chính:", reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
         sheet_logs.append_row([now, user_id, "Trở lại menu"])
@@ -168,12 +156,12 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "optin":
         update_user_optin(user_id, True)
-        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Nhận thông báo đào chiều sớm : ON.", reply_markup=build_main_keyboard())
+        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Nhận thông báo đảo chiều: ON.", reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
 
     elif data == "optout":
         update_user_optin(user_id, False)
-        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đào chiều sớm : OFF.", reply_markup=build_main_keyboard())
+        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đảo chiều: OFF.", reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
 
     elif data.startswith("video_"):
@@ -181,23 +169,28 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption = MENU[index][2]
         video_id = VIDEO_IDS.get(index)
         if video_id:
-            msg = await context.bot.send_video(chat_id=chat_id, video=video_id, caption=caption, reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
-            ]))
+            msg = await context.bot.send_video(
+                chat_id=chat_id,
+                video=video_id,
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+                ])
+            )
         else:
-            msg = await context.bot.send_message(chat_id=chat_id, text="⚠️ Video chưa được cấu hình.", reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
-            ]))
+            msg = await context.bot.send_message(
+                chat_id=chat_id,
+                text="⚠️ Video chưa được cấu hình.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+                ])
+            )
         track_user_message(user_id, msg.message_id)
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("🚫 Bạn không có quyền sử dụng lệnh này.")
-        return
-
-    if not context.args and not update.message.reply_to_message:
-        await update.message.reply_text("⚠️ Dùng: /broadcast <nội dung> hoặc reply tin nhắn")
         return
 
     content = " ".join(context.args) if context.args else update.message.reply_to_message.text or ""
@@ -218,7 +211,6 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 count += 1
             except Exception as e:
                 logger.warning(f"❌ Không gửi được đến {user['ID']}: {e}")
-
     await update.message.reply_text(f"✅ Đã gửi đến {count} người dùng đang opt-in.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -230,23 +222,14 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     opted_in = sum(1 for u in users if u.get("Đăng ký nhận tin") == "✅")
     await update.message.reply_text(f"👥 Tổng người dùng: {total}\n🔔 Đang bật nhận tin: {opted_in}")
 
+# ======================= MAIN ========================
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
+    threading.Thread(target=run_flask, daemon=True).start()
 
     app_telegram.add_handler(CommandHandler("start", start))
     app_telegram.add_handler(CommandHandler("broadcast", broadcast))
     app_telegram.add_handler(CommandHandler("stats", stats))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
-    app_telegram.add_error_handler(error_handler)
 
     logger.info("🚀 Bot Telegram đang chạy polling...")
     app_telegram.run_polling()
-'''
-
-# Ghi ra file entry247_bot.py
-file_path = Path("/mnt/data/entry247_bot.py")
-file_path.write_text(code)
-file_path
-
