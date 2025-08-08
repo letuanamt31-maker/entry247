@@ -1,5 +1,3 @@
-# entry247_bot.py
-
 import os
 import base64
 import threading
@@ -10,7 +8,7 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    ContextTypes
+    MessageHandler, ContextTypes, filters
 )
 import gspread
 from google.oauth2.service_account import Credentials
@@ -22,8 +20,15 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
 ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")
-video_keys = os.getenv("VIDEO_IDS", "").split(",")
-VIDEO_IDS = {i: os.getenv(k) for i, k in enumerate(video_keys)}
+
+VIDEO_IDS = {
+    0: os.getenv("VIDEO_ID_0"),
+    1: os.getenv("VIDEO_ID_1"),
+    2: os.getenv("VIDEO_ID_2"),
+    3: os.getenv("VIDEO_ID_3"),
+    4: os.getenv("VIDEO_ID_4"),
+    5: os.getenv("VIDEO_ID_5")
+}
 
 # ==================== Logging ============================
 logging.basicConfig(level=logging.INFO)
@@ -104,7 +109,7 @@ def update_user_optin(user_id, enabled):
             break
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.error("❌ Lỗi xử lý update:", exc_info=context.error)
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -134,20 +139,22 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Xoá tin nhắn cũ
-    old_msgs = user_sent_messages.pop(user_id, [])
-    for mid in old_msgs:
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=mid)
-        except Exception as e:
-            logger.warning(f"❗ Không xoá được tin nhắn {mid} từ {user_id}: {e}")
+    if user_id in user_sent_messages:
+        for mid in user_sent_messages[user_id]:
+            try:
+                await context.bot.delete_message(chat_id=chat_id, message_id=mid)
+            except:
+                pass
+        user_sent_messages[user_id] = []
 
     if data == "main_menu":
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        except Exception as e:
-            logger.warning(f"❗ Không xoá được main menu: {e}")
+        except:
+            pass
 
-        msg = await context.bot.send_message(chat_id=chat_id, text=f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin góp ý: @Entry247""", reply_markup=build_main_keyboard())
+        welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin góp ý: @Entry247"""
+        msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
         sheet_logs.append_row([now, user_id, "Trở lại menu"])
 
@@ -159,12 +166,12 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "optin":
         update_user_optin(user_id, True)
-        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Nhận thông báo đảo chiều sớm : ON.", reply_markup=build_main_keyboard())
+        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Nhận thông báo đào chiều sớm : ON.", reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
 
     elif data == "optout":
         update_user_optin(user_id, False)
-        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đảo chiều sớm : OFF.", reply_markup=build_main_keyboard())
+        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đào chiều sớm : OFF.", reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
 
     elif data.startswith("video_"):
@@ -172,11 +179,10 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption = MENU[index][2]
         video_id = VIDEO_IDS.get(index)
         if video_id:
-            try:
-                msg = await context.bot.send_video(chat_id=chat_id, video=video_id, caption=caption)
-                track_user_message(user_id, msg.message_id)
-            except Exception as e:
-                logger.warning(f"❌ Gửi video lỗi: {e}")
+            msg = await context.bot.send_video(chat_id=chat_id, video=video_id, caption=caption, reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+            ]))
+            track_user_message(user_id, msg.message_id)
         else:
             msg = await context.bot.send_message(chat_id=chat_id, text="⚠️ Video chưa được cấu hình.")
             track_user_message(user_id, msg.message_id)
@@ -216,6 +222,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     if user_id not in ADMIN_IDS:
         return
+
     users = sheet_users.get_all_records()
     total = len(users)
     opted_in = sum(1 for u in users if u.get("Đăng ký nhận tin") == "✅")
