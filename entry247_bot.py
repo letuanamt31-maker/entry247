@@ -75,6 +75,7 @@ MENU = [
 
 user_sent_messages = {}
 user_last_menu = {}
+user_menu_stack = {}
 
 def track_user_message(user_id, message_id):
     user_sent_messages.setdefault(user_id, []).append(message_id)
@@ -99,8 +100,7 @@ def build_sub_keyboard(index):
             [InlineKeyboardButton("▶️ Đi đúng từ đầu", callback_data="video_start_right")],
             [InlineKeyboardButton("❗ Biết để tránh", callback_data="video_avoid")]
         ])
-    back_to = "main_menu" if index == 0 else f"menu_{index - 1}"
-    items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data=back_to)])
+    items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data="back")])
     return InlineKeyboardMarkup(items)
 
 def update_user_optin(user_id, enabled):
@@ -138,12 +138,31 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("menu_"):
         index = int(data.split("_")[1])
+        prev_index = user_last_menu.get(user_id)
+        if prev_index is not None:
+            user_menu_stack.setdefault(user_id, []).append(prev_index)
         user_last_menu[user_id] = index
         await query.edit_message_text(
             text=f"🔹 {MENU[index][0]}",
             reply_markup=build_sub_keyboard(index)
         )
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
+
+    elif data == "back":
+        if user_menu_stack.get(user_id):
+            back_index = user_menu_stack[user_id].pop()
+            user_last_menu[user_id] = back_index
+            await query.edit_message_text(
+                text=f"🔹 {MENU[back_index][0]}",
+                reply_markup=build_sub_keyboard(back_index)
+            )
+            sheet_logs.append_row([now, user_id, f"Trở lại: {MENU[back_index][0]}"])
+        else:
+            welcome_text = f"""🌟 Xin chào {query.from_user.first_name or "bạn"} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
+            await query.edit_message_text(
+                text=welcome_text,
+                reply_markup=build_main_keyboard()
+            )
 
     elif data == "optin":
         update_user_optin(user_id, True)
@@ -169,7 +188,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_id,
                 caption=caption,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
                 ])
             )
         else:
@@ -177,7 +196,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 text="⚠️ Video chưa được cấu hình.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
                 ])
             )
         track_user_message(user_id, msg.message_id)
@@ -192,7 +211,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_id,
                 caption=caption,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_5")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
                 ])
             )
             track_user_message(user_id, msg.message_id)
@@ -207,7 +226,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_id,
                 caption=caption,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_5")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back")]
                 ])
             )
             track_user_message(user_id, msg.message_id)
