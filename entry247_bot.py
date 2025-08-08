@@ -7,20 +7,18 @@ import logging
 from pathlib import Path
 from flask import Flask
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    MessageHandler, ContextTypes, filters
+    ContextTypes
 )
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-import traceback
 
 # ======================= Load .env =============================
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
 ADMIN_IDS = ["5128195334"]  # ID admin được phép dùng /broadcast
@@ -143,7 +141,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     first_name = query.from_user.first_name or "bạn"
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Xoá toàn bộ các tin nhắn trước đó của user (video, ảnh, văn bản)
+    # Khi nhấn bất kỳ nút nào, xóa toàn bộ tin nhắn trước đó
     if user_id in user_sent_messages:
         for mid in user_sent_messages[user_id]:
             try:
@@ -153,11 +151,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_sent_messages[user_id] = []
 
     if data == "main_menu":
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        except:
-            pass
-
         welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính 🟢\n📌 Mọi thông tin góp ý: @Entry247"""
         msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
@@ -165,6 +158,17 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("menu_"):
         index = int(data.split("_")[1])
+
+        # Nếu chưa có link và video => báo đang hoàn thiện
+        if not MENU[index][1] and not MENU[index][2]:
+            msg = await context.bot.send_message(
+                chat_id=chat_id,
+                text="📢 Danh mục đang được hoàn thiện, sẽ sớm update tới các bạn 🔥"
+            )
+            track_user_message(user_id, msg.message_id)
+            sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]} (đang hoàn thiện)"])
+            return
+
         msg = await context.bot.send_message(chat_id=chat_id, text=f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
         track_user_message(user_id, msg.message_id)
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
@@ -189,6 +193,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             msg = await context.bot.send_message(chat_id=chat_id, text="⚠️ Video chưa được cấu hình.")
             track_user_message(user_id, msg.message_id)
+
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     if user_id not in ADMIN_IDS:
