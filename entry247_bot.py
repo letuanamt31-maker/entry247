@@ -170,17 +170,20 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đảo chiều: OFF.", reply_markup=build_main_keyboard())
         track_user_message(user_id, msg.message_id)
 
-    elif data.startswith("video_"):
+    elif data.startswith("menu_"):
         index = int(data.split("_")[1])
-        caption = MENU[index][2]
-        video_id = VIDEO_IDS.get(index)
-        if video_id:
-            msg = await context.bot.send_video(
-                chat_id=chat_id,
-                video=video_id,
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+
+    # Xoá message callback cũ để tránh đè nhau
+    await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+
+    # Gửi lại menu phụ tương ứng
+    msg = await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"🔹 {MENU[index][0]}",
+        reply_markup=build_sub_keyboard(index)
+    )
+        track_user_message(user_id, msg.message_id)
+        sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
                 ])
             )
         else:
