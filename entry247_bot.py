@@ -59,7 +59,8 @@ def index():
     return "✅ Entry247 bot đang chạy!"
 
 def run_flask():
-    app_flask.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host="0.0.0.0", port=port)
 
 app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -188,10 +189,14 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         track_user_message(user_id, msg.message_id)
         return
 
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🚧 Tính năng broadcast đang được phát triển.")
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📊 Tính năng thống kê đang được phát triển.")
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
-
-# Broadcast và Stats giữ nguyên như cũ...
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
