@@ -108,23 +108,6 @@ def update_user_optin(user_id, enabled):
             sheet_users.update_cell(idx, 5, "✅" if enabled else "❌")
             break
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_id = user.id
-    first_name = user.first_name or "bạn"
-    username = user.username or ""
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    users = sheet_users.get_all_records()
-    if not any(str(user_id) == str(u["ID"]) for u in users):
-        sheet_users.append_row([user_id, first_name, username, now, "❌"])
-
-    sheet_logs.append_row([now, user_id, "/start"])
-
-    welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
-    msg = await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
-    track_user_message(user_id, msg.message_id)
-
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -134,56 +117,47 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if user_id in user_sent_messages:
-        for mid in user_sent_messages[user_id]:
-            try:
-                await context.bot.delete_message(chat_id=chat_id, message_id=mid)
-            except:
-                pass
-        user_sent_messages[user_id] = []
-
     if data == "main_menu":
-        await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        welcome_text = f"""🌟 Xin chào {query.from_user.first_name or "bạn"} 🚀
-
-          Chào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅
-
-          🟢 Bạn có quyền truy cập vào 6 tài nguyên chính
-          📌 Góp ý: @Entry247"""
-        msg = await context.bot.send_message(chat_id=chat_id, text=welcome_text, reply_markup=build_main_keyboard())
-        track_user_message(user_id, msg.message_id)
+        welcome_text = f"""🌟 Xin chào {query.from_user.first_name or "bạn"} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
+        await query.edit_message_text(
+            text=welcome_text,
+            reply_markup=build_main_keyboard()
+        )
         sheet_logs.append_row([now, user_id, "Trở lại menu"])
 
     elif data.startswith("menu_"):
         index = int(data.split("_")[1])
-        msg = await context.bot.send_message(chat_id=chat_id, text=f"🔹 {MENU[index][0]}", reply_markup=build_sub_keyboard(index))
-        track_user_message(user_id, msg.message_id)
+        await query.edit_message_text(
+            text=f"🔹 {MENU[index][0]}",
+            reply_markup=build_sub_keyboard(index)
+        )
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
 
     elif data == "optin":
         update_user_optin(user_id, True)
-        msg = await context.bot.send_message(chat_id=chat_id, text="✅ Nhận thông báo đảo chiều: ON.", reply_markup=build_main_keyboard())
-        track_user_message(user_id, msg.message_id)
+        await query.edit_message_text(
+            text="✅ Nhận thông báo đảo chiều: ON.",
+            reply_markup=build_main_keyboard()
+        )
 
     elif data == "optout":
         update_user_optin(user_id, False)
-        msg = await context.bot.send_message(chat_id=chat_id, text="❌ Nhận thông báo đảo chiều: OFF.", reply_markup=build_main_keyboard())
-        track_user_message(user_id, msg.message_id)
+        await query.edit_message_text(
+            text="❌ Nhận thông báo đảo chiều: OFF.",
+            reply_markup=build_main_keyboard()
+        )
 
-    elif data.startswith("menu_"):
+    elif data.startswith("video_"):
         index = int(data.split("_")[1])
-
-    # Xoá message callback cũ để tránh đè nhau
-    await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-
-    # Gửi lại menu phụ tương ứng
-    msg = await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"🔹 {MENU[index][0]}",
-        reply_markup=build_sub_keyboard(index)
-    )
-        track_user_message(user_id, msg.message_id)
-        sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
+        caption = MENU[index][2]
+        video_id = VIDEO_IDS.get(index)
+        if video_id:
+            msg = await context.bot.send_video(
+                chat_id=chat_id,
+                video=video_id,
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
                 ])
             )
         else:
@@ -195,49 +169,43 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ])
             )
         track_user_message(user_id, msg.message_id)
+        sheet_logs.append_row([now, user_id, f"Xem video: {MENU[index][0]}"])
 
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    if user_id not in ADMIN_IDS:
-        await update.message.reply_text("🚫 Bạn không có quyền sử dụng lệnh này.")
-        return
+    elif data == "video_start_right":
+        caption = "▶️ Đi đúng từ đầu"
+        video_id = VIDEO_IDS.get(0)
+        if video_id:
+            msg = await context.bot.send_video(
+                chat_id=chat_id,
+                video=video_id,
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_5")]
+                ])
+            )
+            track_user_message(user_id, msg.message_id)
+            sheet_logs.append_row([now, user_id, "Xem video: Đi đúng từ đầu"])
 
-    content = " ".join(context.args) if context.args else update.message.reply_to_message.text or ""
-    video = update.message.reply_to_message.video if update.message.reply_to_message and update.message.reply_to_message.video else None
-    image = update.message.reply_to_message.photo[-1] if update.message.reply_to_message and update.message.reply_to_message.photo else None
-
-    users = sheet_users.get_all_records()
-    count = 0
-    for user in users:
-        if user.get("Đăng ký nhận tin") == "✅":
-            try:
-                if video:
-                    await context.bot.send_video(chat_id=int(user["ID"]), video=video.file_id, caption=content)
-                elif image:
-                    await context.bot.send_photo(chat_id=int(user["ID"]), photo=image.file_id, caption=content)
-                else:
-                    await context.bot.send_message(chat_id=int(user["ID"]), text=content)
-                count += 1
-            except Exception as e:
-                logger.warning(f"❌ Không gửi được đến {user['ID']}: {e}")
-    await update.message.reply_text(f"✅ Đã gửi đến {count} người dùng đang opt-in.")
-
-async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    if user_id not in ADMIN_IDS:
-        return
-    users = sheet_users.get_all_records()
-    total = len(users)
-    opted_in = sum(1 for u in users if u.get("Đăng ký nhận tin") == "✅")
-    await update.message.reply_text(f"👥 Tổng người dùng: {total}\n🔔 Đang bật nhận tin: {opted_in}")
+    elif data == "video_avoid":
+        caption = "❗ Biết để tránh"
+        video_id = VIDEO_IDS.get(1)
+        if video_id:
+            msg = await context.bot.send_video(
+                chat_id=chat_id,
+                video=video_id,
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_5")]
+                ])
+            )
+            track_user_message(user_id, msg.message_id)
+            sheet_logs.append_row([now, user_id, "Xem video: Biết để tránh"])
 
 # ======================= MAIN ========================
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
 
-    app_telegram.add_handler(CommandHandler("start", start))
-    app_telegram.add_handler(CommandHandler("broadcast", broadcast))
-    app_telegram.add_handler(CommandHandler("stats", stats))
+    app_telegram.add_handler(CommandHandler("start", lambda u, c: c.bot.send_message(chat_id=u.effective_chat.id, text="🚀 Bot đã sẵn sàng.")))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
 
     logger.info("🚀 Bot Telegram đang chạy polling...")
