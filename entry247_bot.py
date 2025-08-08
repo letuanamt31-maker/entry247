@@ -1,3 +1,5 @@
+# entry247_bot.py
+
 import os
 import base64
 import threading
@@ -17,12 +19,9 @@ from datetime import datetime
 # ======================= Load .env =============================
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 GOOGLE_CREDS_B64 = os.getenv("GOOGLE_CREDS_B64")
 ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")
-
-# VIDEO IDS (load qua ENV)
 video_keys = os.getenv("VIDEO_IDS", "").split(",")
 VIDEO_IDS = {i: os.getenv(k) for i, k in enumerate(video_keys)}
 
@@ -62,7 +61,7 @@ app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
 
 MENU = [
     ("Kênh dữ liệu Update 24/24", "https://docs.google.com/spreadsheets/d/1KvnPpwVFe-FlDWFc1bsjydmgBcEHcBIupC6XaeT1x9I/edit?gid=1941100397#gid=1941100397", "📺 Hướng dẫn đọc số liệu"),
-    ("BCoin_Push", "https://t.me/Entry247_Push", "📺 Hướng dẫn nhóm BCoin"),
+    ("BCoin_Push", "https://t.me/Entry247_Push", "📺 Tìm hiểu Bcoin (video)"),
     ("Premium Signals 🇻🇳", "https://t.me/+6yN39gbr94c0Zjk1", "📺 Premium Signals giúp gì ?"),
     ("Premium Trader Talk 🇻🇳", "https://t.me/+X6ibaOa_ETVhNTY1", "📺 Tìm hiểu nhóm Trader"),
     ("Altcoin Season Signals 🇻🇳", "https://t.me/+_T-rtdJDveRjMWRl", "📺 Thông tin nhóm Altcoin"),
