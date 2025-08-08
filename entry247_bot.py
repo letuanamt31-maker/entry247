@@ -108,6 +108,15 @@ def update_user_optin(user_id, enabled):
             sheet_users.update_cell(idx, 5, "✅" if enabled else "❌")
             break
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    user_id = user.id
+    first_name = user.first_name or "bạn"
+
+    welcome_text = f"""🌟 Xin chào {first_name} 🚀\n\nChào mừng bạn đến với Entry247 Premium – nơi tổng hợp dữ liệu, tín hiệu và chiến lược trading Crypto cho trader nghiêm túc ✅\n\n🟢 Bạn có quyền truy cập vào 6 tài nguyên chính\n📌 Góp ý: @Entry247"""
+
+    await update.message.reply_text(welcome_text, reply_markup=build_main_keyboard())
+
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -205,7 +214,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
 
-    app_telegram.add_handler(CommandHandler("start", lambda u, c: c.bot.send_message(chat_id=u.effective_chat.id, text="🚀 Bot đã sẵn sàng.")))
+    app_telegram.add_handler(CommandHandler("start", start))
     app_telegram.add_handler(CallbackQueryHandler(handle_buttons))
 
     logger.info("🚀 Bot Telegram đang chạy polling...")
