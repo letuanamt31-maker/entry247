@@ -98,7 +98,7 @@ def build_sub_keyboard(index):
             [InlineKeyboardButton("▶️ Đi đúng từ đầu", callback_data="video_start_right")],
             [InlineKeyboardButton("❗ Biết để tránh", callback_data="video_avoid")]
         ])
-    items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data="main_menu")])
+    items.append([InlineKeyboardButton("⬅️ Trở lại", callback_data=f"back_{index}")])
     return InlineKeyboardMarkup(items)
 
 def update_user_optin(user_id, enabled):
@@ -142,6 +142,14 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         sheet_logs.append_row([now, user_id, f"Xem: {MENU[index][0]}"])
 
+    elif data.startswith("back_"):
+        index = int(data.split("_")[1])
+        await query.edit_message_text(
+            text=f"🔹 {MENU[index][0]}",
+            reply_markup=build_sub_keyboard(index)
+        )
+        sheet_logs.append_row([now, user_id, f"Trở lại: {MENU[index][0]}"])
+
     elif data == "optin":
         update_user_optin(user_id, True)
         await query.edit_message_text(
@@ -166,7 +174,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_id,
                 caption=caption,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"back_{index}")]
                 ])
             )
         else:
@@ -174,7 +182,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 text="⚠️ Video chưa được cấu hình.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"menu_{index}")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data=f"back_{index}")]
                 ])
             )
         track_user_message(user_id, msg.message_id)
@@ -189,7 +197,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_id,
                 caption=caption,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_5")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back_5")]
                 ])
             )
             track_user_message(user_id, msg.message_id)
@@ -204,7 +212,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_id,
                 caption=caption,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="menu_5")]
+                    [InlineKeyboardButton("⬅️ Trở lại", callback_data="back_5")]
                 ])
             )
             track_user_message(user_id, msg.message_id)
